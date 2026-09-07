@@ -1,0 +1,84 @@
+/* ------------------------------------------------------------------ */
+/* Global reset                                                        */
+/* ------------------------------------------------------------------ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font: inherit;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/* ------------------------------------------------------------------ */
+/* Design tokens (shared across the whole app)                         */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --green-deep: #1f4d36;
+  --green-mid: #2f6b49;
+  --green-fresh: #3e8e5b;
+  --amber: #c98a22;
+  --amber-bg: #fbf0dc;
+  --red: #b5432d;
+  --red-bg: #fbe4df;
+  --blue: #3b6e96;
+  --blue-bg: #e4edf3;
+  --cream: #faf7f0;
+  --cream-2: #f1ecde;
+  --charcoal: #262420;
+  --charcoal-60: #665f55;
+  --border: #e4dcc8;
+  --green-bg: #e4efe6;
+
+  --font-body: "Poppins", system-ui, sans-serif;
+  --font-display: "Poppins", sans-serif;
+}
+
+/* ------------------------------------------------------------------ */
+/* Base typography / page background                                   */
+/* ------------------------------------------------------------------ */
+
+body {
+  font-family: var(--font-body);
+  color: var(--charcoal);
+  background: var(--cream);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
