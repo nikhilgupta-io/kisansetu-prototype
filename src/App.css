@@ -343,3 +343,132 @@
   .md\:p-10 { padding: 40px; }
   .md\:pb-6 { padding-bottom: 24px; }
 }
+
+/* ==================================================================== */
+/* Modal Overlay & Dialogs                                              */
+/* ==================================================================== */
+
+.ks-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(18, 24, 20, 0.72);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.ks-modal-dialog {
+  background: #ffffff;
+  color: var(--charcoal);
+  border-radius: 20px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+  max-width: 980px;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  position: relative;
+  box-sizing: border-box;
+  animation: ks-modal-fade 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ks-modal-dialog-dark {
+  background: #0f172a;
+  color: #f8fafc;
+  border-color: #334155;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6);
+}
+
+@keyframes ks-modal-fade {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.ks-modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #f8f9fa;
+  color: #495057;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 30;
+}
+.ks-modal-close-btn:hover {
+  background: #e9ecef;
+  color: #000;
+  transform: scale(1.05);
+}
+
+.ks-modal-close-btn-dark {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+.ks-modal-close-btn-dark:hover {
+  background: #334155;
+  color: #fff;
+  transform: scale(1.05);
+}
+
+/* ==================================================================== */
+/* Report Tables & Scanner Laser                                        */
+/* ==================================================================== */
+
+.ks-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+.ks-report-table th {
+  background: #f4f6f5;
+  color: #3f4e45;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.ks-report-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid #edf1ee;
+  vertical-align: middle;
+  color: var(--charcoal);
+}
+.ks-report-table tr:hover td {
+  background: #f8faf9;
+}
+
+@keyframes scanMotion {
+  0% { top: 12%; }
+  100% { top: 86%; }
+}
+
