@@ -73,15 +73,20 @@ def mandi_upcoming(centre_id: int, db: Session = Depends(get_db)):
     if not centre:
         raise HTTPException(status_code=404, detail="Centre not found")
 
+    from services.queue_manager import reorder_queue_by_priority
+    reorder_queue_by_priority(db, centre_id)
+
     # Get waiting + called queue entries, ordered by position
+    # Get waiting queue entries, ordered by position (processing farmer is on the counter)
     entries = (
         db.query(QueueEntry)
         .filter(
             QueueEntry.centre_id == centre_id,
             QueueEntry.status.in_(["waiting", "called", "processing"]),
+            QueueEntry.status == "waiting",
         )
         .order_by(QueueEntry.position)
-        .limit(10)
+        .limit(15)
         .all()
     )
 
@@ -93,13 +98,23 @@ def mandi_upcoming(centre_id: int, db: Session = Depends(get_db)):
         farmer = db.query(Farmer).filter(Farmer.id == booking.farmer_id).first()
         slot = db.query(Slot).filter(Slot.id == booking.slot_id).first()
 
+        perishability_score = farmer.perishability_score if farmer else 1
+        priority_label = (
+            "High Priority (Perishable)" if perishability_score >= 3
+            else "Medium Priority" if perishability_score == 2
+            else "Normal Queue"
+        )
+
         upcoming.append({
             "token": booking.token,
-            "time": slot.start_time if slot else "",
+            "time": slot.display_time.split(" – ")[0] if slot and slot.display_time else (slot.start_time if slot else ""),
             "crop": farmer.crop if farmer else "",
             "farmer_name": farmer.name if farmer else "",
             "booking_id": booking.id,
             "status": entry.status,
+            "position": entry.position,
+            "perishability_score": perishability_score,
+            "priority_label": priority_label,
         })
 
     return {"centre_id": centre_id, "upcoming": upcoming}

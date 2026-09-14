@@ -190,7 +190,34 @@ def book_slot(db: Session, farmer_id: str, centre_id: int, slot_id: int) -> dict
         .first()
     )
     if active_booking:
-        raise ValueError(f"Farmer {farmer_id} already has an active booking for this slot")
+        # During demo: reuse active booking and re-prioritize
+        qe = db.query(QueueEntry).filter(QueueEntry.booking_id == active_booking.id).first()
+        if not qe:
+            qe = QueueEntry(
+                booking_id=active_booking.id,
+                centre_id=centre_id,
+                position=9999,
+                status="waiting",
+            )
+            db.add(qe)
+            db.flush()
+        from services.queue_manager import reorder_queue_by_priority
+        reorder_queue_by_priority(db, centre_id)
+        db.commit()
+        db.refresh(qe)
+        slot_obj = db.query(Slot).filter(Slot.id == slot_id).first()
+        crop_info = get_perishability(farmer.crop) if farmer and farmer.crop else None
+        return {
+            "booking_id": active_booking.id,
+            "token": active_booking.token,
+            "status": active_booking.status,
+            "slot_time": slot_obj.display_time if slot_obj else "",
+            "centre_id": centre_id,
+            "position": qe.position if qe else 2,
+            "crop": farmer.crop if farmer else None,
+            "perishability_score": farmer.perishability_score if farmer else 1,
+            "priority_label": crop_info["label"] if crop_info else "Low",
+        }
 
     slot = db.query(Slot).filter(Slot.id == slot_id, Slot.centre_id == centre_id).first()
     if not slot:
@@ -199,15 +226,19 @@ def book_slot(db: Session, farmer_id: str, centre_id: int, slot_id: int) -> dict
     if slot.booked_count >= slot.max_capacity:
         raise ValueError(f"Slot {slot_id} is full")
 
-    # Generate token: count existing bookings for this centre on this date
-    existing_count = (
-        db.query(func.count(Booking.id))
-        .join(Slot, Booking.slot_id == Slot.id)
-        .filter(Booking.centre_id == centre_id, Slot.date == slot.date)
-        .scalar()
-    ) or 0
+    # Generate token: continue sequential token suffix (>= 128)
+    all_centre_bookings = db.query(Booking).filter(Booking.centre_id == centre_id).all()
+    max_num = 128
+    for b in all_centre_bookings:
+        if b.token and b.token.startswith("A-"):
+            try:
+                num = int(b.token.split("-")[1])
+                if num > max_num:
+                    max_num = num
+            except (ValueError, IndexError):
+                pass
 
-    token = f"A-{existing_count + 1}"
+    token = f"A-{max_num + 1}"
 
     # Increment booked count
     slot.booked_count += 1
@@ -223,22 +254,25 @@ def book_slot(db: Session, farmer_id: str, centre_id: int, slot_id: int) -> dict
     db.add(booking)
     db.flush()
 
-    # Create queue entry — position based on existing queue for this centre
-    queue_count = (
-        db.query(func.count(QueueEntry.id))
-        .filter(QueueEntry.centre_id == centre_id)
-        .scalar()
-    ) or 0
-
+    # Create queue entry (temporary position)
     queue_entry = QueueEntry(
         booking_id=booking.id,
         centre_id=centre_id,
-        position=queue_count + 1,
+        position=9999,
         status="waiting",
     )
     db.add(queue_entry)
-    db.commit()
+    db.flush()
 
+    # Automatically reorder queue by crop perishability priority!
+    # High-perishability (Soybean/Vegetables) moves ahead of waiting Wheat farmers,
+    # while all other farmers stay in the queue waiting their turn.
+    from services.queue_manager import reorder_queue_by_priority
+    reorder_queue_by_priority(db, centre_id)
+    db.commit()
+    db.refresh(queue_entry)
+
+    crop_info = get_perishability(farmer.crop) if farmer and farmer.crop else None
     return {
         "booking_id": booking.id,
         "token": token,
@@ -246,4 +280,7 @@ def book_slot(db: Session, farmer_id: str, centre_id: int, slot_id: int) -> dict
         "slot_time": slot.display_time,
         "centre_id": centre_id,
         "position": queue_entry.position,
+        "crop": farmer.crop if farmer else None,
+        "perishability_score": farmer.perishability_score if farmer else 1,
+        "priority_label": crop_info["label"] if crop_info else "Low",
     }

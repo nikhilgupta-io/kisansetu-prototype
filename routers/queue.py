@@ -26,16 +26,31 @@ def get_live_queue(centre_id: int, db: Session = Depends(get_db)):
     if not centre:
         raise HTTPException(status_code=404, detail="Centre not found")
 
+    from services.queue_manager import reorder_queue_by_priority, reset_demo_queue
+    from models import Farmer
+
+    # Ensure queue is sorted with priority
+    reorder_queue_by_priority(db, centre_id)
     state = get_queue_state(db, centre_id)
 
-    # Enrich entries with token info
+    # Enrich entries with token, farmer name, crop, and perishability info
     entries = []
     for entry in state["entries"]:
         booking = db.query(Booking).filter(Booking.id == entry.booking_id).first()
+        farmer = db.query(Farmer).filter(Farmer.id == booking.farmer_id).first() if booking else None
+        perishability_score = farmer.perishability_score if farmer else 1
         entries.append({
             "id": entry.id,
             "booking_id": entry.booking_id,
             "token": booking.token if booking else "?",
+            "farmer_name": farmer.name if farmer else "",
+            "crop": farmer.crop if farmer else "",
+            "perishability_score": perishability_score,
+            "priority_label": (
+                "High Priority (Perishable)" if perishability_score >= 3
+                else "Medium Priority" if perishability_score == 2
+                else "Normal Queue"
+            ),
             "position": entry.position,
             "status": entry.status,
         })
@@ -49,6 +64,14 @@ def get_live_queue(centre_id: int, db: Session = Depends(get_db)):
         "processing_count": state["processing_count"],
         "completed_count": state["completed_count"],
     }
+
+
+@router.post("/reset/{centre_id}")
+def reset_queue(centre_id: int, db: Session = Depends(get_db)):
+    """Reset the demo queue for a centre to its initial state."""
+    from services.queue_manager import reset_demo_queue
+    result = reset_demo_queue(db, centre_id)
+    return {"success": True, "state": result}
 
 
 @router.post("/advance/{centre_id}")

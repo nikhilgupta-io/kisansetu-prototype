@@ -84,4 +84,3 @@ def apply_allocation(request: ApplyRedistributionRequest, db: Session = Depends(
         return {"success": True, "result": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
