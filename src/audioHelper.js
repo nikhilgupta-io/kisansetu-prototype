@@ -8,6 +8,9 @@ export function playChime() {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
     const now = ctx.currentTime;
 
     const playTone = (freq, start, duration, gainLevel = 0.25) => {

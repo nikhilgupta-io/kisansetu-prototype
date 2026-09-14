@@ -13,7 +13,8 @@ import {
   ScanLine, ClipboardList, ChevronRight, Download, CalendarPlus,
   UserCog, LayoutGrid, MapPinned, FileBarChart, ListChecks,
   PhoneCall, Phone, Smartphone, IndianRupee, Sparkles, RotateCcw,
-  Volume2, FileSpreadsheet, Zap, Info,
+  Volume2, FileSpreadsheet, Zap, Info, CloudRain, ShieldAlert,
+  CloudLightning, ShieldCheck, Droplets, Landmark, Layers,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -1120,14 +1121,23 @@ function LiveQueue({ ahead, setAhead, current, setCurrent, activeBooking }) {
       ];
 
   const advance = async () => {
-    const result = await advanceQueue(1);
-    if (result && result.success) {
-      if (result.current_token) setCurrent(result.current_token);
-      fetchQueue();
-    } else {
-      // Fallback: local simulation
-      setCurrent((c) => `A-${parseInt(c.split("-")[1] || "123") + 1}`);
-      setAhead((a) => a.slice(1));
+    try {
+      const result = await advanceQueue(1);
+      if (result && result.success && result.current_token) {
+        setCurrent(result.current_token);
+        playChime();
+        speakVernacular(`टोकन नंबर ${result.current_token}, कृपया काउंटर नंबर 1 पर आएं।`, "hi");
+        fetchQueue();
+      } else {
+        // Fallback: local simulation
+        const nextTok = `A-${parseInt((current || "A-123").split("-")[1] || "123", 10) + 1}`;
+        setCurrent(nextTok);
+        playChime();
+        speakVernacular(`टोकन नंबर ${nextTok}, कृपया काउंटर नंबर 1 पर आएं।`, "hi");
+        setAhead((a) => a.slice(1));
+      }
+    } catch (e) {
+      console.error("Advance error:", e);
     }
   };
 
@@ -1420,12 +1430,43 @@ function MandiDashboard({ onOpenFarmer, completed, currentToken, onTokenChange }
   const handleCallNext = async () => {
     setCalling(true);
     try {
-      const res = await advanceQueue(1);
-      const nextToken = res?.current_token || (upcoming.length > 0 ? upcoming[0].token : null);
-      if (nextToken) {
+      // 1. Identify the next waiting token to promote
+      const nextCandidate = upcoming.find((u) => u.token !== displayToken)?.token;
+      let nextSeqToken = "A-124";
+      if (displayToken && displayToken.includes("-")) {
+        const n = parseInt(displayToken.split("-")[1], 10);
+        if (!isNaN(n)) nextSeqToken = `A-${n + 1}`;
+      }
+      const chosenToken = nextCandidate || nextSeqToken;
+
+      // 2. Immediate optimistic update (0ms lag for zero-delay UX)
+      if (chosenToken) {
+        setMandiData((prev) => ({
+          ...(prev || stats),
+          current_token: chosenToken,
+          waiting: Math.max(0, (prev?.waiting ?? upcoming.length) - 1),
+          processing: 1,
+          completed: (prev?.completed ?? completed) + 1,
+        }));
+        setUpcomingData((prev) => {
+          if (!prev) return [];
+          return prev.filter((u) => (u.tok || u.token) !== chosenToken);
+        });
+        if (onTokenChange) onTokenChange(chosenToken);
         playChime();
-        speakVernacular(`टोकन नंबर ${nextToken}, कृपया काउंटर नंबर 1 पर आएं।`, "hi");
-        if (onTokenChange) onTokenChange(nextToken);
+        speakVernacular(`टोकन नंबर ${chosenToken}, कृपया काउंटर नंबर 1 पर आएं।`, "hi");
+      }
+
+      // 3. Backend advance
+      const res = await advanceQueue(1);
+      if (res && res.current_token && res.current_token !== chosenToken) {
+        setMandiData((prev) => ({
+          ...prev,
+          current_token: res.current_token,
+          waiting: res.waiting_count,
+          completed: res.completed_count,
+        }));
+        if (onTokenChange) onTokenChange(res.current_token);
       }
       fetchMandi();
     } catch (e) {
@@ -1513,9 +1554,31 @@ function MandiDashboard({ onOpenFarmer, completed, currentToken, onTokenChange }
             <button
               type="button"
               onClick={async () => {
-                await resetQueue(1);
-                setMandiNotice("Queue reset to clean demo baseline (Pos 1: Wheat processing, Pos 2: Soybean, Pos 3: Paddy, Pos 4-6: Wheat).");
-                fetchMandi();
+                setCalling(true);
+                try {
+                  await resetQueue(1);
+                  if (onTokenChange) onTokenChange("A-123");
+                  setMandiData({
+                    centre: { id: 1, name: "Sehore Procurement Centre", name_hi: "सीहोर खरीद केंद्र", status: "Normal" },
+                    total_farmers: 6,
+                    waiting: 5,
+                    processing: 1,
+                    completed: 0,
+                    current_token: "A-123",
+                  });
+                  setUpcomingData([
+                    { token: "A-128", time: "08:00 AM", crop: "Soybean", farmer_name: "Dinesh Yadav", booking_id: 5, perishability_score: 3, position: 2 },
+                    { token: "A-125", time: "09:00 AM", crop: "Paddy", farmer_name: "Mohan Singh", booking_id: 2, perishability_score: 2, position: 3 },
+                    { token: "A-124", time: "09:00 AM", crop: "Wheat", farmer_name: "Suresh Kumar", booking_id: 1, perishability_score: 1, position: 4 },
+                    { token: "A-126", time: "10:00 AM", crop: "Wheat", farmer_name: "Ravi Patel", booking_id: 3, perishability_score: 1, position: 5 },
+                    { token: "A-127", time: "10:30 AM", crop: "Wheat", farmer_name: "Ram Lal", booking_id: 4, perishability_score: 1, position: 6 },
+                  ]);
+                  setMandiNotice("Queue reset to clean demo baseline (Pos 1: Wheat processing, Pos 2: Soybean, Pos 3: Paddy, Pos 4-6: Wheat).");
+                  setTimeout(fetchMandi, 300);
+                } catch (err) {
+                  console.error("Reset error:", err);
+                }
+                setCalling(false);
               }}
               className="ks-btn ks-btn-outline text-xs font-semibold px-3 py-2 flex items-center gap-1 cursor-pointer"
             >
@@ -1791,6 +1854,8 @@ function AdminDashboard({ page, setPage, completed, allocationApplied, applyAllo
   const [demandData, setDemandData] = useState(null);
   const [imbalanceData, setImbalanceData] = useState(null);
 
+  const [weatherActionTaken, setWeatherActionTaken] = useState(false);
+
   useEffect(() => {
     getAdminOverview(null).then((data) => {
       if (data) setAdminData(data);
@@ -1811,15 +1876,113 @@ function AdminDashboard({ page, setPage, completed, allocationApplied, applyAllo
   const stats = adminData || { total_farmers: 12430, completed, waiting: 1284, delayed: 97, centres: CENTRES.map((c) => ({ ...c, queue: c.queue })) };
   const centreList = adminData?.centres || CENTRES.map((c) => ({ ...c, queue: c.queue }));
   const chartData = demandData || (allocationApplied ? DEMAND_FIXED : DEMAND_BASE);
+
   const links = [
-    { id: "overview", label: "Overview", icon: LayoutGrid },
-    { id: "centres", label: "Procurement Centres", icon: MapPinned },
-    { id: "allocation", label: "Smart Slot Allocation", icon: Sparkles },
-    { id: "analytics", label: "Analytics", icon: BarChart3 },
-    { id: "farmers", label: "Farmers", icon: Users },
-    { id: "reports", label: "Reports", icon: FileBarChart },
-    { id: "alerts", label: "Alerts", icon: AlertTriangle },
-    { id: "settings", label: "Settings", icon: Settings },
+    { id: "overview", label: "Command Overview", icon: LayoutGrid },
+    { id: "targets", label: "Procurement & DBT", icon: TrendingUp },
+    { id: "weather", label: "IMD Weather Alert", icon: CloudRain, badge: "85% Rain" },
+    { id: "antifraud", label: "AI Anti-Fraud", icon: ShieldAlert, badge: "Phase 2" },
+    { id: "allocation", label: "Smart Allocation", icon: Sparkles },
+    { id: "reports", label: "Reports & CSV", icon: FileBarChart },
+    { id: "centres", label: "Mandi Network", icon: MapPinned },
+  ];
+
+  // Government Target Monitor Data (Item a)
+  const TARGET_DATA = {
+    seasonTargetMT: 500000,
+    procuredMT: 342180,
+    targetPct: 68.4,
+    dailyInfluxMT: 14820,
+    remainingDays: 11,
+    districts: [
+      { name: "Sehore", target: 100000, actual: 82400, pct: 82.4, status: "Ahead of Schedule", arrivalsToday: 3420 },
+      { name: "Vidisha", target: 110000, actual: 94200, pct: 85.6, status: "Near Target Capacity", arrivalsToday: 4180 },
+      { name: "Bhopal", target: 90000, actual: 58900, pct: 65.4, status: "On Track", arrivalsToday: 2650 },
+      { name: "Raisen", target: 85000, actual: 48300, pct: 56.8, status: "Moderate Influx", arrivalsToday: 2190 },
+      { name: "Ujjain", target: 115000, actual: 58380, pct: 50.8, status: "Ramping Influx", arrivalsToday: 2380 },
+    ],
+    crops: [
+      { name: "Wheat (गेहूं)", volumeMT: 198460, pct: 58.0, msp: "₹2,275/Qtl", valueCr: "₹451.5 Cr", isPerishable: false },
+      { name: "Paddy (धान)", volumeMT: 82120, pct: 24.0, msp: "₹2,300/Qtl", valueCr: "₹188.9 Cr", isPerishable: false },
+      { name: "Soybean (सोयाबीन)", volumeMT: 41060, pct: 12.0, msp: "₹4,892/Qtl", valueCr: "₹200.8 Cr", isPerishable: true },
+      { name: "Mustard (सरसों)", volumeMT: 20540, pct: 6.0, msp: "₹5,650/Qtl", valueCr: "₹116.0 Cr", isPerishable: true },
+    ],
+  };
+
+  // Real-Time PFMS DBT Outflow Data (Item b)
+  const DBT_DATA = {
+    totalCommittedCr: 778.50,
+    disbursedCr: 684.20,
+    disbursedPct: 87.9,
+    pipelineCr: 89.10,
+    failedCr: 5.20,
+    slaCompliancePct: 96.4,
+    avgTatHours: 18.2,
+    pipelineStages: [
+      { step: "1. Scale Weighed", lots: "12,430 lots", amount: "₹778.5 Cr", note: "100% digital weighbridge verified" },
+      { step: "2. J-Form Issued", lots: "12,140 lots", amount: "₹760.8 Cr", note: "Mandi Secretary e-signed" },
+      { step: "3. PFMS Batch Pushed", lots: "11,890 lots", amount: "₹744.1 Cr", note: "SBI/RBI Treasury queue" },
+      { step: "4. DBT Bank Credit", lots: "10,938 lots", amount: "₹684.2 Cr", note: "Aadhaar UTR confirmed" },
+    ],
+    recentTrans: [
+      { farmer: "Dinesh Yadav", fid: "FR-98217", crop: "Soybean", amount: "₹2,19,161", bank: "Bank of Baroda (...9012)", utr: "BARB77123991", tat: "11h 05m", status: "Settled" },
+      { farmer: "Mohan Singh", fid: "FR-98215", crop: "Paddy", amount: "₹1,13,850", bank: "State Bank of India (...4819)", utr: "SBIN89210452", tat: "14h 22m", status: "Settled" },
+      { farmer: "Suresh Kumar", fid: "FR-98214", crop: "Wheat", amount: "₹1,47,875", bank: "Punjab National Bank (...6612)", utr: "PUNB00481923", tat: "19h 40m", status: "Settled" },
+      { farmer: "Ram Lal", fid: "FR-98213", crop: "Wheat", amount: "₹1,02,375", bank: "Central Bank of India (...3190)", utr: "Batch #MP-2026-09", tat: "In Flight (6h)", status: "PFMS Batch" },
+    ],
+  };
+
+  // IMD Weather & Spoilage Early Warning Data (Item d)
+  const WEATHER_RADAR = [
+    { centre: "Vidisha Procurement Centre", risk: "85%", temp: "28°C", condition: "Thunderstorm & Heavy Rain Alert", timeToImpact: "2-3 Hours", tone: "red", openGrainQtl: 3450, criticalCrop: "Soybean (980 Qtl)", lossRiskCr: "₹0.84 Cr", actionNeeded: true },
+    { centre: "Raisen Procurement Centre", risk: "45%", temp: "29°C", condition: "Scattered Showers / Watch", timeToImpact: "5-6 Hours", tone: "amber", openGrainQtl: 1200, criticalCrop: "Wheat (1,200 Qtl)", lossRiskCr: "₹0.27 Cr", actionNeeded: false },
+    { centre: "Sehore Procurement Centre", risk: "10%", temp: "32°C", condition: "Partly Cloudy", timeToImpact: "None", tone: "green", openGrainQtl: 0, criticalCrop: "Covered Storage", lossRiskCr: "₹0.00", actionNeeded: false },
+    { centre: "Bhopal Procurement Centre", risk: "18%", temp: "30°C", condition: "Overcast", timeToImpact: "None", tone: "green", openGrainQtl: 0, criticalCrop: "Covered Yard", lossRiskCr: "₹0.00", actionNeeded: false },
+    { centre: "Ujjain Procurement Centre", risk: "5%", temp: "33°C", condition: "Clear Skies", timeToImpact: "None", tone: "green", openGrainQtl: 0, criticalCrop: "Clear", lossRiskCr: "₹0.00", actionNeeded: false },
+  ];
+
+  // AI Anti-Fraud Vigilance Components (Item c - Future Advancement)
+  const FRAUD_COMPONENTS = [
+    {
+      title: "1. Yield vs. Landholding Anomaly Detection (Bhulekh API)",
+      subtitle: "Detects commercial traders dumping interstate grain using real farmer profiles",
+      tag: "Cadastral Geo-Sync",
+      badge: "Algorithmic Validation",
+      desc: "Cross-checks booked harvest volume against state land records (MP Bhulekh / Khasra) & satellite acreage. Flags instances where a farmer claims 450 quintals on a 1.5-acre holding (standard yield: 22 Qtl/acre).",
+      flagExample: "Anomaly Flagged: Farmer FR-10492 declared 450 Qtl on 1.5 acres. Mandatory physical verification triggered before DBT clearance.",
+      statusText: "Phase 2 Model Training (89.4% precision on historical audit data)",
+      icon: Layers,
+    },
+    {
+      title: "2. Rapid Token Bot & Middleman Syndicate Detector",
+      subtitle: "Prevents broker cartels from cornering prime morning queue slots",
+      tag: "IP / Device Fingerprinting",
+      badge: "Heuristic Rules Built",
+      desc: "Monitors token reservation velocity and IP clustering across web and IVR telephony channels. Automatically throttles and flags clusters when 15+ appointments originate from the same IP or phone number within minutes.",
+      flagExample: "Syndicate Alert: 18 consecutive bookings within 4 minutes from single IP block. Rate-limiter enforced; OTP challenge issued.",
+      statusText: "Rules Engine Implemented & Ready for Sandbox Testing",
+      icon: ShieldCheck,
+    },
+    {
+      title: "3. Weighbridge Moisture & Quality Manipulation Scanner",
+      subtitle: "Identifies collusive grading patterns at physical scale counters",
+      tag: "Statistical Anomaly",
+      badge: "Feature Extraction",
+      desc: "Compares weighbridge moisture deduction distributions across mandi operators against regional agricultural averages. Flags weighmasters consistently approving sub-standard 17%+ moisture grain as Grade A with zero deduction.",
+      flagExample: "Scale Audit Flag: Counter 3 registered 0.0% moisture deduction across 45 consecutive lots while regional average is 13.8%.",
+      statusText: "Statistical distribution pipeline built",
+      icon: Droplets,
+    },
+    {
+      title: "4. Farm-Gate Satellite Crop Verification (Sentinel-2)",
+      subtitle: "Optical confirmation of active standing harvest before pass generation",
+      tag: "Sentinel-2 NDVI",
+      badge: "Architecture Ready",
+      desc: "Integrates European Space Agency Sentinel-2 multispectral imagery to verify active standing crop and vegetative health index on the registered coordinates, preventing paper-only agricultural claims.",
+      flagExample: "Satellite Match: NDVI vegetation index confirmed (0.68 active vegetative density) across registered plot coordinates.",
+      statusText: "API Pipeline Architecture Designed for Pilot Rollout",
+      icon: Landmark,
+    },
   ];
 
   return (
@@ -1830,74 +1993,550 @@ function AdminDashboard({ page, setPage, completed, allocationApplied, applyAllo
           <span className="ks-display font-bold text-white">KisanSetu</span>
         </div>
         {links.map((l) => (
-          <div key={l.id} onClick={() => setPage(l.id)} className={`ks-sidebar-link ${page === l.id ? "active" : ""}`}>
-            <l.icon size={17} /> {l.label}
+          <div
+            key={l.id}
+            onClick={() => setPage(l.id)}
+            className={`ks-sidebar-link flex items-center justify-between cursor-pointer ${page === l.id ? "active" : ""}`}
+          >
+            <div className="flex items-center gap-2">
+              <l.icon size={17} />
+              <span>{l.label}</span>
+            </div>
+            {l.badge && (
+              <span
+                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{
+                  background: l.id === "weather" ? "#EF4444" : "rgba(255,255,255,0.2)",
+                  color: "#fff",
+                }}
+              >
+                {l.badge}
+              </span>
+            )}
           </div>
         ))}
       </aside>
 
       <main className="flex-1 p-6 md:p-8 max-w-5xl">
-        <div className="flex items-center justify-between mb-6">
+        {/* VIEW 1: COMMAND OVERVIEW */}
+        {page === "overview" && (
           <div>
-            <h2 className="ks-display text-2xl font-bold">
-              {links.find((l) => l.id === page)?.label}
-            </h2>
-            <p className="text-sm" style={{ color: "var(--charcoal-60)" }}>Madhya Pradesh region &middot; live overview</p>
-          </div>
-          <UserCog size={22} style={{ color: "var(--charcoal-60)" }} />
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <StatTile label="Total Farmers" value={stats.total_farmers.toLocaleString()} icon={Users} />
-          <StatTile label="Completed" value={stats.completed.toLocaleString()} icon={CheckCircle2} />
-          <StatTile label="Waiting" value={stats.waiting.toLocaleString()} icon={Clock} />
-          <StatTile label="Delayed" value={stats.delayed.toLocaleString()} icon={AlertTriangle} />
-        </div>
-
-        {(page === "overview" || page === "centres") && (
-          <div className="grid md:grid-cols-5 gap-5 mb-6">
-            <div className="ks-card p-5 md:col-span-3">
-              <h3 className="font-semibold text-sm mb-3">Procurement centres</h3>
-              <table className="ks-table">
-                <thead>
-                  <tr>
-                    <th>Centre</th>
-                    <th>Queue</th>
-                    <th>Capacity</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {centreList.map((c) => (
-                    <tr key={c.name}>
-                      <td className="font-medium">{c.name.split(" ")[0]}</td>
-                      <td>{c.queue}</td>
-                      <td>{c.capacity}%</td>
-                      <td><Badge tone={statusTone[c.status]}>{c.status}</Badge></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <h2 className="ks-display text-2xl font-bold">State Procurement Command Center</h2>
+                  <span className="ks-badge ks-badge-green text-xs" style={{ fontSize: "10px" }}>Live APMC Grid</span>
+                </div>
+                <p className="text-xs" style={{ color: "var(--charcoal-60)" }}>
+                  Department of Food, Civil Supplies & Consumer Affairs &middot; Madhya Pradesh Central Zone
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage("targets")}
+                  className="ks-btn text-xs font-semibold px-3 py-1.5 flex items-center gap-1.5 border cursor-pointer hover:bg-slate-50"
+                  style={{ background: "#fff", borderColor: "var(--border)" }}
+                >
+                  <TrendingUp size={13} /> Target Analytics
+                </button>
+                <button
+                  onClick={() => setPage("weather")}
+                  className="ks-btn text-xs font-semibold px-3 py-1.5 flex items-center gap-1.5 border cursor-pointer hover:bg-amber-50"
+                  style={{ background: "#FEF3C7", borderColor: "#FCD34D", color: "#92400E" }}
+                >
+                  <CloudRain size={13} /> Weather Alert (85%)
+                </button>
+              </div>
             </div>
 
-            <div className="ks-card p-5 md:col-span-2">
-              <h3 className="font-semibold text-sm mb-3">Region map</h3>
-              <div className="relative w-full rounded-xl" style={{ height: 220, background: "var(--cream-2)" }}>
-                {centreList.map((c) => (
+            {/* Top Row: Targets Progress & DBT Outflow Highlights */}
+            <div className="grid md:grid-cols-2 gap-4 mb-5">
+              {/* Season Target Progress Bar */}
+              <div className="ks-card p-4 transition-all hover:shadow-sm" style={{ background: "#fff", border: "1px solid var(--border)" }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "var(--green-bg)", color: "var(--green-deep)" }}>
+                      <TrendingUp size={14} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800">Season Procurement Target</div>
+                      <div className="text-[11px] text-slate-500">Rabi / Kharif 2026 Season Goal</div>
+                    </div>
+                  </div>
+                  <span className="font-bold text-sm" style={{ color: "var(--green-deep)" }}>
+                    {TARGET_DATA.targetPct}%
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="w-full bg-slate-100 rounded-full h-3 mb-2 overflow-hidden border border-slate-200">
                   <div
-                    key={c.name}
-                    title={`${c.name} \u00b7 ${c.status}`}
-                    className="map-marker"
-                    style={{ left: `${c.location_x ?? c.x}%`, top: `${c.location_y ?? c.y}%` }}
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${TARGET_DATA.targetPct}%`,
+                      background: "linear-gradient(90deg, var(--green-deep) 0%, #2E7D32 100%)",
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span><strong>{TARGET_DATA.procuredMT.toLocaleString()} MT</strong> procured</span>
+                  <span>Target: <strong>{TARGET_DATA.seasonTargetMT.toLocaleString()} MT</strong></span>
+                </div>
+                <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                  <span>Daily Influx: <strong>{TARGET_DATA.dailyInfluxMT.toLocaleString()} MT / day</strong></span>
+                  <span className="text-emerald-700 font-semibold">~{TARGET_DATA.remainingDays} days to target</span>
+                </div>
+              </div>
+
+              {/* Real-time PFMS DBT Outflow Metric */}
+              <div className="ks-card p-4 transition-all hover:shadow-sm" style={{ background: "#fff", border: "1px solid var(--border)" }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "var(--green-bg)", color: "var(--green-deep)" }}>
+                      <IndianRupee size={14} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800">Real-Time DBT Outflow (PFMS)</div>
+                      <div className="text-[11px] text-slate-500">Direct Farmer Account Credits</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    96.4% &lt; 24h
+                  </span>
+                </div>
+
+                <div className="mb-2">
+                  <div className="text-2xl font-bold text-slate-900 tracking-tight">
+                    ₹ {DBT_DATA.disbursedCr} <span className="text-xs font-semibold text-slate-500">Crore</span>
+                  </div>
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    {DBT_DATA.disbursedPct}% of total ₹{DBT_DATA.totalCommittedCr} Cr procurement value cleared
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                  <span>Avg Settlement TAT: <strong>{DBT_DATA.avgTatHours} Hours</strong></span>
+                  <span>In Treasury Pipeline: <strong>₹{DBT_DATA.pipelineCr} Cr</strong></span>
+                </div>
+              </div>
+            </div>
+
+            {/* Weather Alert Notification Banner */}
+            <div
+              onClick={() => setPage("weather")}
+              className="ks-card p-3 mb-5 border flex items-center justify-between cursor-pointer transition-all hover:shadow-sm"
+              style={{ background: "#FEF2F2", borderColor: "#FCA5A5" }}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0">
+                  <CloudRain size={17} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-red-900 flex items-center gap-1.5">
+                    <span>IMD Flash Alert: Vidisha Mandi Open Yard (85% Rain Probability)</span>
+                    <span className="text-[9px] bg-red-600 text-white px-1.5 py-0.2 rounded font-semibold">Critical</span>
+                  </div>
+                  <div className="text-[11px] text-red-700">
+                    3,450 Quintals of grain in open transit (including 980 Qtl perishable Soybean). Heavy thunderstorm expected in 2–3 hours.
+                  </div>
+                </div>
+              </div>
+              <button
+                className="ks-btn text-xs font-bold px-3 py-1 text-white bg-red-600 hover:bg-red-700 rounded-lg flex items-center gap-1 flex-shrink-0 ml-2"
+              >
+                <span>Inspect & Divert →</span>
+              </button>
+            </div>
+
+            {/* 4 Stat Tiles */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              <StatTile label="Total Farmers Registered" value={stats.total_farmers.toLocaleString()} icon={Users} />
+              <StatTile label="Completed Today" value={stats.completed.toLocaleString()} icon={CheckCircle2} />
+              <StatTile label="Waiting in Queue" value={stats.waiting.toLocaleString()} icon={Clock} />
+              <StatTile label="Capacity Reallocated" value={stats.delayed.toLocaleString()} icon={AlertTriangle} />
+            </div>
+
+            {/* Centres Table & Region Map */}
+            <div className="grid md:grid-cols-5 gap-5 mb-6">
+              <div className="ks-card p-5 md:col-span-3" style={{ background: "#fff", border: "1px solid var(--border)" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-sm">Procurement Centres Network</h3>
+                  <span className="text-xs text-slate-500">5 Active District Hubs</span>
+                </div>
+                <table className="ks-table">
+                  <thead>
+                    <tr>
+                      <th>Centre</th>
+                      <th>Queue</th>
+                      <th>Capacity</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {centreList.map((c) => (
+                      <tr key={c.name}>
+                        <td className="font-medium">{c.name.split(" ")[0]}</td>
+                        <td>{c.queue}</td>
+                        <td>{c.capacity}%</td>
+                        <td><Badge tone={statusTone[c.status]}>{c.status}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="ks-card p-5 md:col-span-2" style={{ background: "#fff", border: "1px solid var(--border)" }}>
+                <h3 className="font-semibold text-sm mb-3">Madhya Pradesh Region Map</h3>
+                <div className="relative w-full rounded-xl" style={{ height: 220, background: "var(--cream-2)" }}>
+                  {centreList.map((c) => (
+                    <div
+                      key={c.name}
+                      title={`${c.name} \u00b7 ${c.status}`}
+                      className="map-marker"
+                      style={{ left: `${c.location_x ?? c.x}%`, top: `${c.location_y ?? c.y}%` }}
+                    >
+                      <span
+                        className="map-marker-dot"
+                        style={{
+                          width: c.name.includes("Bhopal") ? 16 : 12, height: c.name.includes("Bhopal") ? 16 : 12,
+                          background: c.status === "Critical" ? "var(--red)" : c.status === "Busy" ? "var(--amber)" : "var(--green-fresh)",
+                        }}
+                      />
+                      <span className="map-marker-label">{c.name.split(" ")[0]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 2: PROCUREMENT TARGET MONITOR & REAL-TIME DBT OUTFLOW (Items a & b) */}
+        {page === "targets" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="ks-display text-2xl font-bold">Procurement Targets & DBT Outflow</h2>
+                <p className="text-xs" style={{ color: "var(--charcoal-60)" }}>
+                  Real-time MSP monitoring, district quota fulfillment, and PFMS direct treasury settlement
+                </p>
+              </div>
+              <span className="ks-badge ks-badge-green text-xs">PFMS Live Sync</span>
+            </div>
+
+            {/* PART A: The Procurement Target Monitor */}
+            <div className="ks-card p-5" style={{ background: "#fff", border: "1px solid var(--border)" }}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "var(--green-bg)", color: "var(--green-deep)" }}>
+                    <TrendingUp size={16} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-800">State Procurement Target Fulfillment</h3>
+                    <p className="text-xs text-slate-500">Central Zone: 5,00,000 MT Target &middot; Rabi/Kharif Season</p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                  {TARGET_DATA.targetPct}% Target Reached
+                </span>
+              </div>
+
+              {/* Master Progress Bar */}
+              <div className="w-full bg-slate-100 rounded-full h-3.5 mb-4 overflow-hidden border border-slate-200">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${TARGET_DATA.targetPct}%`,
+                    background: "linear-gradient(90deg, var(--green-deep) 0%, #2E7D32 100%)",
+                  }}
+                />
+              </div>
+
+              {/* District Target Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+                {TARGET_DATA.districts.map((d) => (
+                  <div key={d.name} className="p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-slate-800">{d.name}</span>
+                      <span className={`text-[10px] font-bold ${d.pct >= 80 ? "text-emerald-700" : d.pct >= 60 ? "text-blue-700" : "text-amber-700"}`}>
+                        {d.pct}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-1.5 mb-2 overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${d.pct}%`,
+                          background: d.pct >= 80 ? "var(--green-deep)" : d.pct >= 60 ? "#2563EB" : "#D97706",
+                        }}
+                      />
+                    </div>
+                    <div className="text-[11px] text-slate-500 flex justify-between">
+                      <span>{(d.actual / 1000).toFixed(1)}k MT</span>
+                      <span>Target: {(d.target / 1000).toFixed(0)}k</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1">
+                      Today: +{d.arrivalsToday} MT
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Crop Composition Table */}
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">
+                  Crop Influx Breakdown & MSP Value
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {TARGET_DATA.crops.map((c) => (
+                    <div key={c.name} className="p-3 rounded-xl border border-slate-200 bg-white">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-xs text-slate-800">{c.name}</span>
+                        {c.isPerishable && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
+                            Perishable
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-base font-bold text-slate-900">{c.volumeMT.toLocaleString()} MT</div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
+                        <span>MSP: {c.msp}</span>
+                        <span className="font-semibold text-slate-700">{c.valueCr}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* PART B: Real-Time DBT Outflow & PFMS Treasury Tracker */}
+            <div className="ks-card p-5" style={{ background: "#fff", border: "1px solid var(--border)" }}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "var(--green-bg)", color: "var(--green-deep)" }}>
+                    <IndianRupee size={16} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-800">PFMS Direct Benefit Transfer (DBT) Pipeline</h3>
+                    <p className="text-xs text-slate-500">Direct-to-bank settlement speed, audit compliance, and UTR tracking</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-slate-500">24-Hour Settlement SLA</div>
+                  <div className="text-sm font-bold text-emerald-700">96.4% on-time (Avg: 18.2h)</div>
+                </div>
+              </div>
+
+              {/* 4-Stage PFMS Funnel */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-5">
+                {DBT_DATA.pipelineStages.map((st, i) => (
+                  <div key={st.step} className="p-3 rounded-xl border border-slate-200 bg-slate-50/60 relative">
+                    <div className="text-[11px] font-bold text-slate-500 mb-1">{st.step}</div>
+                    <div className="text-base font-bold text-slate-800">{st.amount}</div>
+                    <div className="text-xs text-slate-600">{st.lots}</div>
+                    <div className="text-[10px] text-slate-400 mt-1.5 pt-1.5 border-t border-slate-200">
+                      {st.note}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Live Real-Time DBT Settlement Feed */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Recent Real-Time DBT Disbursements
+                  </h4>
+                  <span className="text-[11px] text-slate-500">Simulated live bank ledger</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="ks-table">
+                    <thead>
+                      <tr>
+                        <th>Farmer</th>
+                        <th>Crop</th>
+                        <th>Disbursed Amount</th>
+                        <th>Bank & Account</th>
+                        <th>UTR Reference</th>
+                        <th>Turnaround</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {DBT_DATA.recentTrans.map((tr) => (
+                        <tr key={tr.farmer}>
+                          <td>
+                            <div className="font-bold text-xs">{tr.farmer}</div>
+                            <div className="text-[10px] text-slate-400">{tr.fid}</div>
+                          </td>
+                          <td className="text-xs">{tr.crop}</td>
+                          <td className="font-bold text-xs text-slate-900">{tr.amount}</td>
+                          <td className="text-xs text-slate-600">{tr.bank}</td>
+                          <td>
+                            <code className="text-[11px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-700 font-mono">
+                              {tr.utr}
+                            </code>
+                          </td>
+                          <td className="text-xs text-slate-600">{tr.tat}</td>
+                          <td>
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                tr.status === "Settled"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-blue-100 text-blue-800"
+                              }`}
+                            >
+                              {tr.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 3: IMD WEATHER & SPOILAGE EARLY WARNING (Item d) */}
+        {page === "weather" && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="ks-display text-2xl font-bold">IMD Weather & Spoilage Early Warning</h2>
+                <p className="text-xs" style={{ color: "var(--charcoal-60)" }}>
+                  Real-time Doppler radar integration &middot; Open-yard grain rain protection & emergency rerouting
+                </p>
+              </div>
+              <span className="ks-badge ks-badge-green text-xs flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                IMD Radar Live
+              </span>
+            </div>
+
+            {/* Grain-at-Risk Alert Hero Card */}
+            <div
+              className="ks-card p-5 border transition-all"
+              style={{
+                background: weatherActionTaken ? "#F0FDF4" : "#FEF2F2",
+                borderColor: weatherActionTaken ? "#86EFAC" : "#FCA5A5",
+              }}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: weatherActionTaken ? "#DCFCE7" : "#FEE2E2",
+                      color: weatherActionTaken ? "#15803D" : "#B91C1C",
+                    }}
                   >
-                    <span
-                      className="map-marker-dot"
-                      style={{
-                        width: c.name.includes("Bhopal") ? 16 : 12, height: c.name.includes("Bhopal") ? 16 : 12,
-                        background: c.status === "Critical" ? "var(--red)" : c.status === "Busy" ? "var(--amber)" : "var(--green-fresh)",
+                    {weatherActionTaken ? <CheckCircle2 size={22} /> : <CloudRain size={22} />}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900">
+                        {weatherActionTaken
+                          ? "Emergency Action Deployed: 3,450 Quintals Grain Secured"
+                          : "Critical Weather Risk: 3,450 Quintals Uncovered at Vidisha Mandi"}
+                      </span>
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{
+                          background: weatherActionTaken ? "#DCFCE7" : "#DC2626",
+                          color: weatherActionTaken ? "#15803D" : "#fff",
+                        }}
+                      >
+                        {weatherActionTaken ? "Protocols Active" : "85% Rain in 2-3h"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      {weatherActionTaken
+                        ? "142 tractor-trolleys successfully rerouted to covered Bhopal Silos & CWC Godown; 24 tarpaulins deployed over open bays."
+                        : "Heavy downpour expected in 2–3 hours. 980 Quintals of high-spoilage Soybean exposed in open yard. Potential spoilage loss: ₹84.20 Lakh."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {!weatherActionTaken ? (
+                    <button
+                      onClick={() => {
+                        playChime();
+                        setWeatherActionTaken(true);
                       }}
-                    />
-                    <span className="map-marker-label">{c.name.split(" ")[0]}</span>
+                      className="ks-btn text-xs font-bold px-4 py-2.5 text-white bg-red-600 hover:bg-red-700 rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+                    >
+                      <Zap size={14} />
+                      <span>Trigger Emergency Divert & Cover Order</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setWeatherActionTaken(false)}
+                      className="ks-btn text-xs font-semibold px-3 py-2 text-slate-700 bg-white border border-slate-300 rounded-xl flex items-center gap-1.5 cursor-pointer hover:bg-slate-50"
+                    >
+                      <RotateCcw size={13} />
+                      <span>Reset Simulation</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {weatherActionTaken && (
+                <div className="p-3 rounded-xl bg-white border border-emerald-200 text-xs text-emerald-900 mt-2 space-y-1 animate-fade-in">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <CheckCircle2 size={14} className="text-emerald-600" />
+                    Government Administrative Order Dispatched:
+                  </div>
+                  <div className="text-[11px] text-slate-600 pl-5">
+                    • <strong>142 Drivers Notified via SMS:</strong> Token validity preserved; rerouted to Bhopal Covered Grain Silo (Gate #2).
+                  </div>
+                  <div className="text-[11px] text-slate-600 pl-5">
+                    • <strong>Mandi Secretary Acknowledged:</strong> 24 heavy-duty 500 GSM PVC tarpaulins securely battened down on Vidisha Weighbridge bays.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Regional Mandi Weather Radar Grid */}
+            <div className="ks-card p-5" style={{ background: "#fff", border: "1px solid var(--border)" }}>
+              <h3 className="font-bold text-sm text-slate-800 mb-3">
+                IMD Radar Precipitation Risk Across Mandi Network
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                {WEATHER_RADAR.map((wr) => (
+                  <div
+                    key={wr.centre}
+                    className={`p-3 rounded-xl border ${
+                      wr.tone === "red"
+                        ? "border-red-300 bg-red-50/40"
+                        : wr.tone === "amber"
+                        ? "border-amber-300 bg-amber-50/40"
+                        : "border-slate-200 bg-slate-50/40"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-slate-800">{wr.centre.split(" ")[0]}</span>
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          wr.tone === "red"
+                            ? "bg-red-100 text-red-800"
+                            : wr.tone === "amber"
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-emerald-100 text-emerald-800"
+                        }`}
+                      >
+                        {wr.risk}
+                      </span>
+                    </div>
+                    <div className="text-xs font-semibold text-slate-700">{wr.condition}</div>
+                    <div className="text-[11px] text-slate-500 mt-1">Temp: {wr.temp} &middot; {wr.timeToImpact}</div>
+                    <div className="mt-2 pt-2 border-t border-slate-200 text-[10px] text-slate-500">
+                      Open Grain: <strong>{wr.openGrainQtl} Qtl</strong>
+                      {wr.openGrainQtl > 0 && <div className="text-red-700 font-semibold">{wr.criticalCrop}</div>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1905,12 +2544,107 @@ function AdminDashboard({ page, setPage, completed, allocationApplied, applyAllo
           </div>
         )}
 
+        {/* VIEW 4: AI ANTI-FRAUD & VIGILANCE (Item c - Future Advancement "Coming Soon") */}
+        {page === "antifraud" && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="ks-display text-2xl font-bold">AI Anti-Fraud & Vigilance Engine</h2>
+                <p className="text-xs" style={{ color: "var(--charcoal-60)" }}>
+                  Machine-learning anomaly detection for safeguarding public MSP procurement integrity
+                </p>
+              </div>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                🚀 Phase 2 Pilot (Coming Soon)
+              </span>
+            </div>
+
+            {/* "Coming Soon" Hero Banner */}
+            <div className="ks-card p-6" style={{ background: "linear-gradient(135deg, #FAF7F2 0%, #EBF4EE 100%)", border: "1px solid var(--border)" }}>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "var(--green-bg)", color: "var(--green-deep)" }}>
+                  <ShieldAlert size={26} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-base text-slate-900">AI Vigilance Module &bull; Slated for Phase 2 Pilot</h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-white">
+                      Roadmap Q4 2026
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed mb-3">
+                    KisanSetu's AI Vigilance Engine is being developed as an algorithmic defense system against ghost farmers, interstate commercial grain dumping, and scale tampering. Below are the 4 core sub-systems currently undergoing model validation against MP Bhulekh cadastral datasets.
+                  </p>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className="px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-700 font-medium">
+                      🎯 Target: Zero Fake Farmer Registrations
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-700 font-medium">
+                      🛡️ Anti-Cartel Rate Limiting
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-700 font-medium">
+                      🛰️ Sentinel-2 Satellite Sync
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* The 4 Key Components as Crisp Architecture Cards */}
+            <div className="grid md:grid-cols-2 gap-4">
+              {FRAUD_COMPONENTS.map((fc) => (
+                <div key={fc.title} className="ks-card p-4 flex flex-col justify-between" style={{ background: "#fff", border: "1px solid var(--border)" }}>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "var(--green-bg)", color: "var(--green-deep)" }}>
+                          <fc.icon size={16} />
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                          {fc.tag}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        {fc.badge}
+                      </span>
+                    </div>
+
+                    <h4 className="font-bold text-sm text-slate-900 mb-1">{fc.title}</h4>
+                    <p className="text-xs text-slate-500 mb-2.5 leading-relaxed">{fc.subtitle}</p>
+                    <p className="text-xs text-slate-600 leading-relaxed mb-3">{fc.desc}</p>
+
+                    <div className="p-2.5 rounded-lg bg-amber-50/60 border border-amber-200 text-[11px] text-amber-900 leading-relaxed font-mono">
+                      {fc.flagExample}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Validation Status</span>
+                    <span className="font-medium text-emerald-700">{fc.statusText}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 5: SMART SLOT ALLOCATION (Preserved) */}
         {page === "allocation" && (
           <div className="space-y-5">
-            <div className="ks-card p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="ks-display text-2xl font-bold">Smart Slot Allocation & Load Balancing</h2>
+                <p className="text-xs" style={{ color: "var(--charcoal-60)" }}>
+                  Automated demand vs capacity analysis across regional procurement centres
+                </p>
+              </div>
+              <span className="ks-badge ks-badge-green text-xs">AI Optimization</span>
+            </div>
+
+            <div className="ks-card p-5" style={{ background: "#fff", border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles size={16} style={{ color: "var(--green-deep)" }} />
-                <h3 className="font-semibold text-sm">Expected demand vs. available capacity</h3>
+                <h3 className="font-semibold text-sm">Expected Demand vs. Available Mandi Capacity</h3>
               </div>
               <div style={{ width: "100%", height: 260 }}>
                 <ResponsiveContainer>
@@ -1945,28 +2679,94 @@ function AdminDashboard({ page, setPage, completed, allocationApplied, applyAllo
                     {imbalanceData?.imbalances?.[0]?.recommendation || "Move 28 appointments from Vidisha → Bhopal"}
                   </p>
                 </div>
-                <button onClick={async () => {
-                  const imb = imbalanceData?.imbalances?.[0];
-                  if (imb) {
-                    await applyAllocationAction(imb.centre_id, imb.target_centre_id, imb.move_count, "2026-09-12");
-                  }
-                  applyAllocation();
-                }} className="ks-btn ks-btn-primary px-5 py-2.5 text-sm">Apply Recommendation</button>
+                <button
+                  onClick={async () => {
+                    const imb = imbalanceData?.imbalances?.[0];
+                    if (imb) {
+                      await applyAllocationAction(imb.centre_id, imb.target_centre_id, imb.move_count, "2026-09-12");
+                    }
+                    applyAllocation();
+                  }}
+                  className="ks-btn ks-btn-primary px-5 py-2.5 text-sm cursor-pointer"
+                >
+                  Apply Recommendation
+                </button>
               </div>
             ) : (
               <div className="ks-card p-4 flex items-center gap-2" style={{ background: "var(--green-bg)", border: "none" }}>
                 <CheckCircle2 size={18} style={{ color: "var(--green-deep)" }} />
-                <span className="text-sm font-medium" style={{ color: "var(--green-deep)" }}>Slot allocation updated successfully.</span>
+                <span className="text-sm font-medium" style={{ color: "var(--green-deep)" }}>
+                  Slot allocation updated successfully. 28 appointments re-routed to Bhopal.
+                </span>
               </div>
             )}
           </div>
         )}
 
+        {/* VIEW 6: REPORTS & CSV (Preserved) */}
         {page === "reports" && <ReportModal isModal={false} />}
 
-        {["analytics", "farmers", "alerts", "settings"].includes(page) && (
-          <div className="ks-card p-10 text-center text-sm" style={{ color: "var(--charcoal-60)" }}>
-            {links.find((l) => l.id === page)?.label} view &mdash; out of scope for this prototype pass.
+        {/* VIEW 7: CENTRES NETWORK */}
+        {page === "centres" && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="ks-display text-2xl font-bold">Mandi Network Infrastructure</h2>
+                <p className="text-xs" style={{ color: "var(--charcoal-60)" }}>
+                  Centres capacity, queue bottlenecks, and regional GIS layout
+                </p>
+              </div>
+              <span className="ks-badge ks-badge-green text-xs">5 Centres Active</span>
+            </div>
+
+            <div className="grid md:grid-cols-5 gap-5">
+              <div className="ks-card p-5 md:col-span-3" style={{ background: "#fff", border: "1px solid var(--border)" }}>
+                <h3 className="font-semibold text-sm mb-3">Mandi Counters & Real-Time Queue</h3>
+                <table className="ks-table">
+                  <thead>
+                    <tr>
+                      <th>Centre</th>
+                      <th>Queue</th>
+                      <th>Capacity</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {centreList.map((c) => (
+                      <tr key={c.name}>
+                        <td className="font-medium">{c.name}</td>
+                        <td>{c.queue}</td>
+                        <td>{c.capacity}%</td>
+                        <td><Badge tone={statusTone[c.status]}>{c.status}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="ks-card p-5 md:col-span-2" style={{ background: "#fff", border: "1px solid var(--border)" }}>
+                <h3 className="font-semibold text-sm mb-3">Region Map</h3>
+                <div className="relative w-full rounded-xl" style={{ height: 220, background: "var(--cream-2)" }}>
+                  {centreList.map((c) => (
+                    <div
+                      key={c.name}
+                      title={`${c.name} \u00b7 ${c.status}`}
+                      className="map-marker"
+                      style={{ left: `${c.location_x ?? c.x}%`, top: `${c.location_y ?? c.y}%` }}
+                    >
+                      <span
+                        className="map-marker-dot"
+                        style={{
+                          width: c.name.includes("Bhopal") ? 16 : 12, height: c.name.includes("Bhopal") ? 16 : 12,
+                          background: c.status === "Critical" ? "var(--red)" : c.status === "Busy" ? "var(--amber)" : "var(--green-fresh)",
+                        }}
+                      />
+                      <span className="map-marker-label">{c.name.split(" ")[0]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
