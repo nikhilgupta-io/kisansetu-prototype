@@ -8,6 +8,9 @@ class CentreOut(BaseModel):
     id: int
     name: str
     name_hi: Optional[str] = None
+    centre_type: Optional[str] = "Main Hub"
+    distance_km: Optional[float] = 0.0
+    open_quota_mt: Optional[int] = 500
     location_x: Optional[float] = None
     location_y: Optional[float] = None
     capacity_per_hour: int

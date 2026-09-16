@@ -33,41 +33,135 @@ def seed():
     # Centres (matches CENTRES in App.jsx)                                #
     # ------------------------------------------------------------------ #
     centres = [
+        # --- 10-km Hyper-Local Radial Cluster (Sehore Hub) ---
         Centre(
-            name="Sehore Procurement Centre",
-            name_hi="सीहोर खरीद केंद्र",
-            location_x=27,
-            location_y=56,
+            name="Sehore Main APMC Mandi",
+            name_hi="सीहोर मुख्य मंडी",
+            centre_type="Main District Hub",
+            distance_km=0.0,
+            open_quota_mt=0,
+            location_x=28,
+            location_y=55,
             capacity_per_hour=60,
-            status="Busy",
+            status="Critical",
         ),
         Centre(
-            name="Vidisha Procurement Centre",
-            name_hi="विदिशा खरीद केंद्र",
+            name="Ichhawar Sub-Mandi",
+            name_hi="इछावर उप-मंडी",
+            centre_type="Sub-Mandi",
+            distance_km=7.2,
+            open_quota_mt=420,
+            location_x=26,
+            location_y=63,
+            capacity_per_hour=45,
+            status="Normal",
+        ),
+        Centre(
+            name="Bilkisganj Rural Yard",
+            name_hi="बिलकिसगंज ग्रामीण केंद्र",
+            centre_type="Rural Yard",
+            distance_km=9.4,
+            open_quota_mt=650,
+            location_x=34,
+            location_y=56,
+            capacity_per_hour=35,
+            status="Normal",
+        ),
+        Centre(
+            name="Phanda Logistics Yard",
+            name_hi="फंदा उपार्जन केंद्र",
+            centre_type="Sub-Mandi",
+            distance_km=9.8,
+            open_quota_mt=510,
+            location_x=38,
+            location_y=52,
+            capacity_per_hour=50,
+            status="Normal",
+        ),
+        Centre(
+            name="Shyampur Agro Center",
+            name_hi="श्यामपुर उप-मंडी",
+            centre_type="Sub-Mandi",
+            distance_km=11.2,
+            open_quota_mt=380,
+            location_x=25,
+            location_y=46,
+            capacity_per_hour=40,
+            status="Normal",
+        ),
+        Centre(
+            name="Doraha Kisan Yard",
+            name_hi="दोराहा किसान केंद्र",
+            centre_type="Rural Yard",
+            distance_km=12.0,
+            open_quota_mt=340,
+            location_x=33,
+            location_y=47,
+            capacity_per_hour=35,
+            status="Normal",
+        ),
+        Centre(
+            name="Ashta Grain Hub",
+            name_hi="आष्टा अनाज मंडी",
+            centre_type="Regional Hub",
+            distance_km=14.5,
+            open_quota_mt=720,
+            location_x=19,
+            location_y=60,
+            capacity_per_hour=55,
+            status="Busy",
+        ),
+        # --- Regional District Centres ---
+        Centre(
+            name="Vidisha Main APMC Mandi",
+            name_hi="विदिशा मुख्य मंडी",
+            centre_type="Main District Hub",
+            distance_km=42.0,
+            open_quota_mt=850,
             location_x=70,
             location_y=34,
             capacity_per_hour=60,
             status="Critical",
         ),
         Centre(
-            name="Bhopal Procurement Centre",
-            name_hi="भोपाल खरीद केंद्र",
-            location_x=50,
-            location_y=50,
-            capacity_per_hour=60,
+            name="Gulabganj Sub-Mandi",
+            name_hi="गुलाबगंज उप-मंडी",
+            centre_type="Sub-Mandi",
+            distance_km=48.5,
+            open_quota_mt=480,
+            location_x=75,
+            location_y=28,
+            capacity_per_hour=40,
             status="Normal",
         ),
         Centre(
-            name="Raisen Procurement Centre",
-            name_hi="रायसेन खरीद केंद्र",
+            name="Bhopal Bairagarh Terminal",
+            name_hi="भोपाल बैरागढ़ टर्मिनल",
+            centre_type="Mega Logistics Hub",
+            distance_km=35.0,
+            open_quota_mt=1850,
+            location_x=50,
+            location_y=50,
+            capacity_per_hour=80,
+            status="Normal",
+        ),
+        Centre(
+            name="Raisen Krishi Mandi",
+            name_hi="रायसेन कृषि मंडी",
+            centre_type="Main District Hub",
+            distance_km=58.0,
+            open_quota_mt=920,
             location_x=66,
             location_y=66,
             capacity_per_hour=60,
             status="Normal",
         ),
         Centre(
-            name="Ujjain Procurement Centre",
-            name_hi="उज्जैन खरीद केंद्र",
+            name="Ujjain Central Mandi",
+            name_hi="उज्जैन केंद्रीय मंडी",
+            centre_type="Regional Terminal",
+            distance_km=92.0,
+            open_quota_mt=1200,
             location_x=16,
             location_y=78,
             capacity_per_hour=60,
@@ -168,8 +262,8 @@ def seed():
     db.flush()
     print(f"  ✓ {len(slots)} slots created for Sehore on {slot_date}")
 
-    # Also create slots for Vidisha (centre_id=2) — these will show demand > capacity
-    vidisha = centres[1]
+    # Slots for Vidisha — these will show demand > capacity
+    vidisha = next(c for c in centres if "Vidisha" in c.name)
     vidisha_slot_defs = [
         ("08:00", "09:00", "08:00 AM – 09:00 AM", 15, 10),
         ("09:00", "10:00", "09:00 AM – 10:00 AM", 15, 14),
@@ -195,7 +289,7 @@ def seed():
     print(f"  ✓ {len(vidisha_slots)} slots created for Vidisha on {slot_date}")
 
     # Slots for Bhopal — underloaded (good redistribution target)
-    bhopal = centres[2]
+    bhopal = next(c for c in centres if "Bhopal" in c.name)
     bhopal_slot_defs = [
         ("08:00", "09:00", "08:00 AM – 09:00 AM", 15, 2),
         ("09:00", "10:00", "09:00 AM – 10:00 AM", 15, 4),
@@ -219,6 +313,30 @@ def seed():
     db.add_all(bhopal_slots)
     db.flush()
     print(f"  ✓ {len(bhopal_slots)} slots created for Bhopal on {slot_date}")
+
+    # Seed slots for all other sub-mandis and regional centres
+    other_centres = [c for c in centres if c.id not in (sehore.id, vidisha.id, bhopal.id)]
+    other_slots = []
+    for oc in other_centres:
+        for start, end, display, capacity, booked in [
+            ("08:00", "09:00", "08:00 AM – 09:00 AM", 15, 3),
+            ("09:00", "10:00", "09:00 AM – 10:00 AM", 15, 5),
+            ("10:00", "11:00", "10:00 AM – 11:00 AM", 15, 6),
+            ("11:00", "12:00", "11:00 AM – 12:00 PM", 15, 4),
+            ("12:00", "13:00", "12:00 PM – 01:00 PM", 15, 2),
+        ]:
+            other_slots.append(Slot(
+                centre_id=oc.id,
+                date=slot_date,
+                start_time=start,
+                end_time=end,
+                display_time=display,
+                max_capacity=capacity,
+                booked_count=booked,
+            ))
+    db.add_all(other_slots)
+    db.flush()
+    print(f"  ✓ {len(other_slots)} slots created for {len(other_centres)} satellite/regional centres on {slot_date}")
 
     # ------------------------------------------------------------------ #
     # Bookings — create bookings for the demo farmers                     #

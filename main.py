@@ -108,4 +108,3 @@ def root():
 def health():
     """API health-check endpoint."""
     return {"status": "ok"}
-
