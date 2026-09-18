@@ -263,6 +263,7 @@ def seed():
     print(f"  ✓ {len(slots)} slots created for Sehore on {slot_date}")
 
     # Slots for Vidisha — these will show demand > capacity
+    # Slots for Vidisha — these will show demand > capacity at 10 AM & 11 AM
     vidisha = next(c for c in centres if "Vidisha" in c.name)
     vidisha_slot_defs = [
         ("08:00", "09:00", "08:00 AM – 09:00 AM", 15, 10),
@@ -271,6 +272,12 @@ def seed():
         ("11:00", "12:00", "11:00 AM – 12:00 PM", 15, 15),   # full — demand > capacity
         ("12:00", "13:00", "12:00 PM – 01:00 PM", 15, 12),
         ("13:00", "14:00", "01:00 PM – 02:00 PM", 15, 8),
+        ("08:00", "09:00", "08:00 AM – 09:00 AM", 60, 40),
+        ("09:00", "10:00", "09:00 AM – 10:00 AM", 60, 55),
+        ("10:00", "11:00", "10:00 AM – 11:00 AM", 60, 78),   # overload: 78 vs 60
+        ("11:00", "12:00", "11:00 AM – 12:00 PM", 60, 82),   # overload: 82 vs 60
+        ("12:00", "13:00", "12:00 PM – 01:00 PM", 60, 50),
+        ("13:00", "14:00", "01:00 PM – 02:00 PM", 60, 30),
     ]
     vidisha_slots = []
     for start, end, display, capacity, booked in vidisha_slot_defs:
@@ -297,6 +304,12 @@ def seed():
         ("11:00", "12:00", "11:00 AM – 12:00 PM", 15, 2),
         ("12:00", "13:00", "12:00 PM – 01:00 PM", 15, 1),
         ("13:00", "14:00", "01:00 PM – 02:00 PM", 15, 0),
+        ("08:00", "09:00", "08:00 AM – 09:00 AM", 80, 20),
+        ("09:00", "10:00", "09:00 AM – 10:00 AM", 80, 25),
+        ("10:00", "11:00", "10:00 AM – 11:00 AM", 80, 26),
+        ("11:00", "12:00", "11:00 AM – 12:00 PM", 80, 28),
+        ("12:00", "13:00", "12:00 PM – 01:00 PM", 80, 22),
+        ("13:00", "14:00", "01:00 PM – 02:00 PM", 80, 16),
     ]
     bhopal_slots = []
     for start, end, display, capacity, booked in bhopal_slot_defs:
