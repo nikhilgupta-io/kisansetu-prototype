@@ -15,11 +15,11 @@ import {
   PhoneCall, Phone, Smartphone, IndianRupee, Sparkles, RotateCcw,
   Volume2, FileSpreadsheet, Zap, Info, CloudRain, ShieldAlert,
   CloudLightning, ShieldCheck, Droplets, Landmark, Layers,
-  Compass, Radio, Navigation, Building2, Truck,
+  Compass, Radio, Navigation, Building2, Truck, Store, ShoppingBag, Lock, Unlock,
 } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer,
+  BarChart, Bar, Cell, ReferenceLine, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, LabelList,
 } from "recharts";
 import "./App.css";
 import IVRSimulator from "./IVRSimulator";
@@ -107,21 +107,39 @@ const CENTRES = [
 ];
 
 const DEMAND_BASE = [
-  { hour: "08 AM", demand: 40, capacity: 60 },
-  { hour: "09 AM", demand: 55, capacity: 60 },
-  { hour: "10 AM", demand: 78, capacity: 60 },
-  { hour: "11 AM", demand: 82, capacity: 60 },
-  { hour: "12 PM", demand: 50, capacity: 60 },
-  { hour: "01 PM", demand: 30, capacity: 60 },
+  { hour: "08 AM", demand: 38, capacity: 60, tag: "38" },
+  { hour: "09 AM", demand: 54, capacity: 60, tag: "54" },
+  { hour: "10 AM", demand: 78, capacity: 60, tag: "🚨 78" },
+  { hour: "11 AM", demand: 82, capacity: 60, tag: "🚨 82" },
+  { hour: "12 PM", demand: 48, capacity: 60, tag: "48" },
+  { hour: "01 PM", demand: 28, capacity: 60, tag: "28" },
 ];
 
 const DEMAND_FIXED = [
-  { hour: "08 AM", demand: 40, capacity: 60 },
-  { hour: "09 AM", demand: 55, capacity: 60 },
-  { hour: "10 AM", demand: 64, capacity: 60 },
-  { hour: "11 AM", demand: 68, capacity: 60 },
-  { hour: "12 PM", demand: 64, capacity: 60 },
-  { hour: "01 PM", demand: 30, capacity: 60 },
+  { hour: "08 AM", demand: 54, capacity: 60, expanded: true, change: "▲ +16 Absorbed", tag: "54 (▲+16)" },
+  { hour: "09 AM", demand: 54, capacity: 60, tag: "54" },
+  { hour: "10 AM", demand: 50, capacity: 60, change: "▼ -28 Smoothed", tag: "50 (▼-28)" },
+  { hour: "11 AM", demand: 52, capacity: 60, change: "▼ -30 Smoothed", tag: "52 (▼-30)" },
+  { hour: "12 PM", demand: 56, capacity: 60, expanded: true, change: "▲ +8 Absorbed", tag: "56 (▲+8)" },
+  { hour: "01 PM", demand: 48, capacity: 60, expanded: true, change: "▲ +20 Absorbed", tag: "48 (▲+20)" },
+];
+
+const DEMAND_BHOPAL_BASE = [
+  { hour: "08 AM", demand: 20, capacity: 80, tag: "20" },
+  { hour: "09 AM", demand: 25, capacity: 80, tag: "25" },
+  { hour: "10 AM", demand: 26, capacity: 80, tag: "26" },
+  { hour: "11 AM", demand: 28, capacity: 80, tag: "28" },
+  { hour: "12 PM", demand: 22, capacity: 80, tag: "22" },
+  { hour: "01 PM", demand: 16, capacity: 80, tag: "16" },
+];
+
+const DEMAND_BHOPAL_FIXED = [
+  { hour: "08 AM", demand: 20, capacity: 80, tag: "20" },
+  { hour: "09 AM", demand: 25, capacity: 80, tag: "25" },
+  { hour: "10 AM", demand: 38, capacity: 80, expanded: true, change: "▲ +12 Absorbed", tag: "38 (▲+12)" },
+  { hour: "11 AM", demand: 40, capacity: 80, expanded: true, change: "▲ +12 Absorbed", tag: "40 (▲+12)" },
+  { hour: "12 PM", demand: 22, capacity: 80, tag: "22" },
+  { hour: "01 PM", demand: 16, capacity: 80, tag: "16" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -641,6 +659,327 @@ function FarmerDashboard({ lang, setView, procurementDone, setProcurementDone })
 }
 
 /* ------------------------------------------------------------------ */
+/* B2B / B2C TRANSACTION EXPLAINER MODAL (In-App vs External Reroute) */
+/* ------------------------------------------------------------------ */
+
+function TransactionExplainerModal({ isOpen, onClose, lang = "en" }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="ks-modal-overlay" onClick={onClose}>
+      <div
+        className="ks-modal-dialog"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: 580,
+          background: "#ffffff",
+          padding: 0,
+          borderRadius: 20,
+          boxShadow: "0 25px 60px -15px rgba(0,0,0,0.5)",
+          border: "1.5px solid var(--border)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Modal Header */}
+        <div
+          style={{
+            background: "linear-gradient(135deg, var(--green-deep) 0%, #153826 100%)",
+            padding: "16px 20px",
+            color: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                background: "rgba(255, 255, 255, 0.15)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+              }}
+            >
+              <Landmark size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#ffffff" }}>
+                {lang === "hi" ? "B2B व B2C लेन-देन प्रणाली (DPI Architecture)" : "How B2B & B2C Transactions Work"}
+              </h3>
+              <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(255, 255, 255, 0.8)" }}>
+                {lang === "hi" ? "किसानसेतु 100% इन-ऐप निष्पादन · कोई बाह्य रीडायरेक्ट नहीं" : "100% In-App Sovereign DPI · Zero External Rerouting"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "rgba(255, 255, 255, 0.2)",
+              color: "#ffffff",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "background 0.15s ease",
+            }}
+            title="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Modal Scrollable Body */}
+        <div style={{ padding: "20px", maxHeight: "78vh", overflowY: "auto", background: "#fcfbf9" }}>
+          {/* Key Answer Callout */}
+          <div
+            style={{
+              background: "#ebf7ee",
+              border: "1.5px solid #a3d9b1",
+              borderRadius: 14,
+              padding: "14px 16px",
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 4 }}>
+              <CheckCircle2 size={18} style={{ color: "var(--green-deep)", flexShrink: 0, marginTop: 2 }} />
+              <div style={{ fontWeight: 700, fontSize: 13, color: "var(--green-deep)" }}>
+                {lang === "hi"
+                  ? "100% इन-ऐप सरकारी DPI व ONDC — कोई बाह्य ऐप डाउनलोड नहीं!"
+                  : "100% In-App via Government DPI & ONDC Protocol — No External App Redirect!"}
+              </div>
+            </div>
+            <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.6, color: "#1b4d2e" }}>
+              {lang === "hi"
+                ? "किसानों को निजी कंपनियों (ITC या अडानी ऐप) पर नहीं भेजा जाता। किसानसेतु एक संप्रभु खुले प्लेटफॉर्म (Sovereign Switchboard) के रूप में कार्य करता है, जिससे भावांतर DBT और मूल्य सुरक्षा सरकार के नियंत्रण में 100% सुरक्षित रहती है।"
+                : "Farmers do NOT get rerouted to private firm websites or separate corporate apps. KisanSetu operates as the unified sovereign switchboard, ensuring legal price transparency, automated e-J-Form generation, and direct treasury Bhavantar DBT."}
+            </p>
+          </div>
+
+          {/* 1. B2B Industrial Model */}
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1.5px solid var(--border)",
+              borderRadius: 14,
+              padding: "16px",
+              marginBottom: 16,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: "var(--green-bg)",
+                  color: "var(--green-deep)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Building2 size={16} />
+              </div>
+              <div>
+                <h4 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--charcoal)" }}>
+                  {lang === "hi" ? "1. B2B औद्योगिक मॉडल (ITC / अडानी + भावांतर शील्ड):" : "1. B2B Industrial Flow (ITC / Adani + MP Bhavantar Shield):"}
+                </h4>
+                <div style={{ fontSize: 10.5, color: "var(--charcoal-60)" }}>
+                  {lang === "hi" ? "सोयाबीन क्रशिंग मिलों को सीधे गेट-पास व राज्य भावांतर गारंटी" : "Direct factory gate pass & state price difference protection"}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[
+                {
+                  step: 1,
+                  title: lang === "hi" ? "डिजिटल गेट पास:" : "Digital Gate Pass in App:",
+                  desc: lang === "hi"
+                    ? "किसान को किसानसेतु में एन्क्रिप्टेड QR टोकन मिलता है जिसमें न्यूनतम MSP गारंटी ₹4,892 दर्ज होती है।"
+                    : "Farmer generates authenticated QR pass in KisanSetu with guaranteed ₹4,892/Qtl MSP floor.",
+                },
+                {
+                  step: 2,
+                  title: lang === "hi" ? "फैक्ट्री गेट पर स्कैन:" : "Factory Gate Optical Scan:",
+                  desc: lang === "hi"
+                    ? "मिल का वेईब्रिज स्कैनर किसानसेतु QR पास स्कैन करता है। स्वचालित सेंसर से कुल और खाली वजन दर्ज होता है।"
+                    : "Factory weighbridge optical scanner scans KisanSetu pass; gross-tare weights logged via IoT scale.",
+                },
+                {
+                  step: 3,
+                  title: lang === "hi" ? "कॉर्पोरेट सीधा RTGS भुगतान:" : "Corporate RTGS Settlement:",
+                  desc: lang === "hi"
+                    ? "मिल सीधे किसान के बैंक खाते में बोली मूल्य (₹4,720/क्विंटल = ₹1,65,200) RTGS से तुरंत भेजती है।"
+                    : "Mill ERP executes direct commercial RTGS payment (₹4,720/Qtl = ₹1,65,200) straight to farmer bank account.",
+                },
+                {
+                  step: 4,
+                  title: lang === "hi" ? "स्वचालित भावांतर DBT:" : "Automated Bhavantar DBT:",
+                  desc: lang === "hi"
+                    ? "किसानसेतु वेईब्रिज डेटा से e-J-फॉर्म बनाकर म.प्र. सरकारी ट्रेजरी API को भेजता है। अंतर राशि (₹172/Qtl = ₹6,020) सीधे आधार बैंक खाते में 24 घंटे में पहुंचती है।"
+                    : "KisanSetu generates e-J-Form and triggers MP Treasury API. Price difference (₹172/Qtl = ₹6,020) credited via Aadhaar DBT within 24h, fulfilling full ₹4,892 MSP.",
+                },
+              ].map((item) => (
+                <div key={item.step} style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 11.5, lineHeight: 1.55 }}>
+                  <span
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      background: "var(--green-deep)",
+                      color: "#fff",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      marginTop: 1,
+                    }}
+                  >
+                    {item.step}
+                  </span>
+                  <div>
+                    <strong style={{ color: "var(--charcoal)", marginRight: 4 }}>{item.title}</strong>
+                    <span style={{ color: "var(--charcoal-60)" }}>{item.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 2. B2C ONDC Model */}
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1.5px solid #a7f3d0",
+              borderRadius: 14,
+              padding: "16px",
+              marginBottom: 16,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: "#ecfdf5",
+                  color: "#059669",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <ShoppingBag size={16} />
+              </div>
+              <div>
+                <h4 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--charcoal)" }}>
+                  {lang === "hi" ? "2. B2C फार्म-टू-कंज्यूमर मॉडल (ONDC ओपन प्रोटोकॉल):" : "2. B2C Farm-to-Fork Flow (ONDC Beckn Protocol):"}
+                </h4>
+                <div style={{ fontSize: 10.5, color: "var(--charcoal-60)" }}>
+                  {lang === "hi" ? "हाउसिंग सोसायटियों से 3x भाव व NPCI स्मार्ट एस्क्रो" : "Urban residential clusters at 3x prices & NPCI Smart Escrow"}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[
+                {
+                  step: 1,
+                  title: lang === "hi" ? "शहरी उपभोक्ता समूह प्री-ऑर्डर:" : "Urban Cluster Pre-Order:",
+                  desc: lang === "hi"
+                    ? "हाउसिंग सोसायटियां (जैसे अरेरा कॉलोनी भोपाल) किसी भी ONDC ऐप से 15 क्विंटल ताजी सब्जियों का प्री-ऑर्डर देती हैं।"
+                    : "Urban residential societies (Arera Colony RWA) pool vegetable pre-orders over any ONDC buyer app.",
+                },
+                {
+                  step: 2,
+                  title: lang === "hi" ? "किसानसेतु सेलर गेटवे:" : "KisanSetu as Beckn Seller Node:",
+                  desc: lang === "hi"
+                    ? "किसानसेतु ONDC सेलर नोड के रूप में काम करता है। किसान को ऐप के भीतर ही ₹42/किग्रा का थोक बैच दिखाई देता है।"
+                    : "KisanSetu acts as an ONDC Seller Gateway. Farmer sees verified pooled batch at ₹42/kg (+300% over Mandi rate).",
+                },
+                {
+                  step: 3,
+                  title: lang === "hi" ? "NPCI स्मार्ट एस्क्रो:" : "NPCI Smart Escrow Payment:",
+                  desc: lang === "hi"
+                    ? "उपभोक्ताओं की कुल राशि ₹63,000 ONDC एस्क्रो में सुरक्षित लॉक हो जाती है।"
+                    : "Full customer payment of ₹63,000 is held in ONDC NPCI Smart Escrow prior to dispatch.",
+                },
+                {
+                  step: 4,
+                  title: lang === "hi" ? "गांव में वाहन आगमन व भुगतान रिलीज:" : "Village Dispatch & Instant UPI:",
+                  desc: lang === "hi"
+                    ? "लॉजिस्टिक्स वाहन गांव के क्लस्टर में आकर QR स्कैन करता है, और पूरी राशि सीधे किसान के UPI खाते में तुरंत ट्रांसफर हो जाती है।"
+                    : "Logistics vehicle scans farmer dispatch QR at rural hub; escrow instantly releases ₹63,000 to farmer UPI account.",
+                },
+              ].map((item) => (
+                <div key={item.step} style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 11.5, lineHeight: 1.55 }}>
+                  <span
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      background: "#059669",
+                      color: "#fff",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      marginTop: 1,
+                    }}
+                  >
+                    {item.step}
+                  </span>
+                  <div>
+                    <strong style={{ color: "var(--charcoal)", marginRight: 4 }}>{item.title}</strong>
+                    <span style={{ color: "var(--charcoal-60)" }}>{item.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: "100%",
+              padding: "12px",
+              borderRadius: 12,
+              background: "var(--green-deep)",
+              color: "#ffffff",
+              fontWeight: 700,
+              fontSize: 13,
+              border: "none",
+              cursor: "pointer",
+              transition: "background 0.15s ease",
+            }}
+          >
+            {lang === "hi" ? "समझ गया · बुकिंग पर वापस जाएं" : "✓ Understood · Return to Booking"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* FARMER — book slot (Smartphone Self-Service)                       */
 /* ------------------------------------------------------------------ */
 
@@ -653,24 +992,110 @@ function BookSlot({ onConfirmed, onSwitchToIVR, lang = "en" }) {
   const [apiSlots, setApiSlots] = useState(null);
   const [recommendedSlot, setRecommendedSlot] = useState(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [nearbyMandisFull, setNearbyMandisFull] = useState(false); // TRUE only if NO nearby mandi has available slots
+  const [selectedBuyer, setSelectedBuyer] = useState("itc");
+  const [b2bQuantity, setB2bQuantity] = useState(35);
+  const [b2cQuantity, setB2cQuantity] = useState(15);
+  const [showTxModal, setShowTxModal] = useState(false);
 
   const crops = [
-    { name: "Wheat", name_hi: "गेहूं", score: 1, label: "Low Risk", desc: "Dry grain · Standard load balancing" },
-    { name: "Soybean", name_hi: "सोयाबीन", score: 3, label: "High Spoilage Risk", desc: "Oil oxidation · Early slots prioritized!" },
-    { name: "Paddy", name_hi: "धान", score: 2, label: "Medium Risk", desc: "Moisture sensitive · Early slot preference" },
-    { name: "Mustard", name_hi: "सरसों", score: 3, label: "High Spoilage Risk", desc: "Oilseed spoilage · Express priority" },
-    { name: "Maize", name_hi: "मक्का", score: 2, label: "Medium Risk", desc: "Moisture sensitive · Balanced slots" },
+    {
+      name: "Wheat",
+      name_hi: "गेहूं",
+      score: 1,
+      label: "Low Risk",
+      desc: "Dry grain · Standard load balancing",
+      msp: 2275,
+      quotaStatus: "open",
+    },
+    {
+      name: "Soybean",
+      name_hi: "सोयाबीन",
+      score: 3,
+      label: nearbyMandisFull ? "10-km Full (B2B Active)" : "High Spoilage Risk",
+      desc: nearbyMandisFull ? "All 10-km Mandis Saturated · B2B Off-Ramp Unlocked" : "Sehore Quota Full · 10-km Mesh Active (Ichhawar Open)",
+      msp: 4892,
+      quotaStatus: nearbyMandisFull ? "cluster_full" : "mesh_open",
+    },
+    {
+      name: "Paddy",
+      name_hi: "धान",
+      score: 2,
+      label: "Medium Risk",
+      desc: "Moisture sensitive · Early slot preference",
+      msp: 2300,
+      quotaStatus: "open",
+    },
+    {
+      name: "Mustard",
+      name_hi: "सरसों",
+      score: 3,
+      label: "High Spoilage Risk",
+      desc: "Oilseed spoilage · Express priority",
+      msp: 5650,
+      quotaStatus: "open",
+    },
+    {
+      name: "Vegetables",
+      name_hi: "ताज़ी सब्ज़ियाँ",
+      score: 3,
+      label: "Perishable",
+      desc: "No Mandi MSP · Direct Farm-to-Fork ONDC",
+      msp: null,
+      quotaStatus: "non_msp",
+    },
+  ];
+
+  const b2bBuyers = [
+    {
+      id: "itc",
+      name: "ITC e-Choupal (Sehore Hub)",
+      fullName: "ITC e-Choupal Agro Logistics Hub, Sehore",
+      distance: "5.4 km",
+      corporateBid: 4720,
+      bhavantarDbt: 172,
+      netMsp: 4892,
+      badge: "Nearest Hub · 5.4 km",
+      bay: "Priority Factory Bay #3",
+      code: "ITC-98217",
+    },
+    {
+      id: "adani",
+      name: "Adani Wilmar Solvent Plant",
+      fullName: "Adani Wilmar Edible Oil Plant, Pithampur",
+      distance: "18.2 km",
+      corporateBid: 4650,
+      bhavantarDbt: 242,
+      netMsp: 4892,
+      badge: "High Capacity Intake",
+      bay: "Silo Intake Bay #1",
+      code: "ADANI-98217",
+    },
+    {
+      id: "kriti",
+      name: "Kriti Nutrients Agro Plant",
+      fullName: "Kriti Nutrients Agro Processing, Dewas",
+      distance: "22.0 km",
+      corporateBid: 4750,
+      bhavantarDbt: 142,
+      netMsp: 4892,
+      badge: "Highest Bid (₹4,750)",
+      bay: "Express Bay #5",
+      code: "KRITI-98217",
+    },
   ];
 
   const centres = CENTRES;
 
-  const loadSlotsForSelection = async () => {
+  const loadSlotsForSelection = async (targetCentre = null, targetCrop = null) => {
     setLoadingSlots(true);
+    const useCrop = targetCrop || chosenCrop;
+    const useCentre = targetCentre || chosenCentre;
     let queryFarmer = "FR-98213";
-    if (chosenCrop === "Soybean") queryFarmer = "FR-98217";
-    else if (chosenCrop === "Paddy") queryFarmer = "FR-98215";
+    if (useCrop === "Soybean") queryFarmer = "FR-98217";
+    else if (useCrop === "Paddy") queryFarmer = "FR-98215";
 
-    const data = await getSlots(chosenCentre, chosenDate, null, queryFarmer);
+    const data = await getSlots(useCentre, chosenDate, null, queryFarmer);
     if (data && data.slots) {
       setApiSlots(data.slots);
       if (data.recommended) {
@@ -720,6 +1145,7 @@ function BookSlot({ onConfirmed, onSwitchToIVR, lang = "en" }) {
     const isRerouted = chosenCentre === 2 && chosenCrop === "Soybean";
 
     onConfirmed({
+      channel: "govt",
       token: result?.booking?.token || (chosenCrop === "Soybean" ? "A-128" : "A-127"),
       slotTime: slotObj?.display_time || slotObj?.time || "10:30 AM – 11:30 AM",
       slotDate: chosenDate,
@@ -729,6 +1155,59 @@ function BookSlot({ onConfirmed, onSwitchToIVR, lang = "en" }) {
       isPerishable: isPerishable,
       perishabilityScore: selectedCropMeta?.score || (chosenCrop === "Soybean" ? 3 : 1),
       isRerouted: isRerouted,
+    });
+  };
+
+  const handleB2BBooking = () => {
+    const b = b2bBuyers.find((x) => x.id === selectedBuyer) || b2bBuyers[0];
+    playChime();
+    onConfirmed({
+      channel: "b2b",
+      token: `B2B-${b.code}`,
+      slotTime: `11:00 AM – 12:30 PM (${b.bay})`,
+      slotDate: chosenDate,
+      centreName: b.fullName,
+      crop: lang === "hi" ? selectedCropMeta.name_hi : selectedCropMeta.name,
+      cropName: chosenCrop,
+      isPerishable: true,
+      perishabilityScore: 3,
+      b2bDetails: {
+        buyerId: b.id,
+        buyerName: b.fullName,
+        bay: b.bay,
+        bidPrice: b.corporateBid,
+        bhavantarTopup: b.bhavantarDbt,
+        mspPrice: 4892,
+        quantity: b2bQuantity,
+        corporateTotal: b2bQuantity * b.corporateBid,
+        bhavantarTotal: b2bQuantity * b.bhavantarDbt,
+        netTotal: b2bQuantity * 4892,
+        distance: b.distance,
+      },
+    });
+  };
+
+  const handleB2CBooking = () => {
+    playChime();
+    onConfirmed({
+      channel: "b2c",
+      token: "ONDC-AGR-49821",
+      slotTime: "07:30 AM – 09:00 AM (Early Dispatch Batch)",
+      slotDate: chosenDate,
+      centreName: "Arera Colony RWA Consumer Hub, Bhopal",
+      crop: lang === "hi" ? "ताज़ी सब्ज़ियाँ" : "Fresh Farm Vegetables",
+      cropName: "Vegetables",
+      isPerishable: true,
+      perishabilityScore: 3,
+      b2cDetails: {
+        network: "ONDC Open Protocol",
+        clusterName: "Arera Colony RWA & Residents Club, Bhopal",
+        quantity: b2cQuantity,
+        directPrice: 42,
+        mandiPrice: 14,
+        extraEarnings: b2cQuantity * 28 * 10,
+        totalEarnings: b2cQuantity * 42 * 10,
+      },
     });
   };
 
@@ -780,6 +1259,9 @@ function BookSlot({ onConfirmed, onSwitchToIVR, lang = "en" }) {
             {lang === "hi" ? "फसल और खरीद केंद्र चुनें" : "Select Crop & Procurement Centre"}
           </h3>
 
+          {/* Transaction Explainer Modal */}
+          <TransactionExplainerModal isOpen={showTxModal} onClose={() => setShowTxModal(false)} lang={lang} />
+
           {/* Crop Selector */}
           <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--charcoal-60)" }}>
             {lang === "hi" ? "आप कौन सी फसल ला रहे हैं?" : "What crop are you bringing?"}
@@ -810,6 +1292,55 @@ function BookSlot({ onConfirmed, onSwitchToIVR, lang = "en" }) {
                   </span>
                 </div>
                 <div className="text-[11px] mt-0.5" style={{ color: "var(--charcoal-60)" }}>{c.desc}</div>
+
+                {/* Explicit Action Badges on Each Crop Card */}
+                {c.name === "Soybean" && (
+                  <div className="mt-2 pt-1.5 border-t border-slate-200/80 flex items-center justify-between">
+                    {nearbyMandisFull ? (
+                      <>
+                        <span className="text-[10px] font-bold text-amber-900 flex items-center gap-1">
+                          <Building2 size={11} className="text-amber-700" />
+                          <span>B2B Industrial Off-Ramp</span>
+                        </span>
+                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-500 text-white">
+                          B2B
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[10px] font-medium text-slate-600 flex items-center gap-1">
+                          <Compass size={11} className="text-emerald-700" />
+                          <span>Govt Mandi MSP (10-km Mesh)</span>
+                        </span>
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                          Govt
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+                {c.name === "Vegetables" && (
+                  <div className="mt-2 pt-1.5 border-t border-slate-200/80 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-emerald-800 flex items-center gap-1">
+                      <ShoppingBag size={11} className="text-emerald-700" />
+                      ONDC Direct Farm-to-Fork
+                    </span>
+                    <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-600 text-white">
+                      B2C
+                    </span>
+                  </div>
+                )}
+                {c.name !== "Soybean" && c.name !== "Vegetables" && (
+                  <div className="mt-2 pt-1.5 border-t border-slate-200/80 flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-slate-600 flex items-center gap-1">
+                      <Landmark size={11} className="text-slate-500" />
+                      Govt Mandi MSP Quota
+                    </span>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                      Govt
+                    </span>
+                  </div>
+                )}
               </button>
             ))}
           </div>
@@ -827,96 +1358,388 @@ function BookSlot({ onConfirmed, onSwitchToIVR, lang = "en" }) {
             </div>
           )}
 
-          {/* 10-km Hyper-Local Cluster Auto-Reroute Banner when Sehore Soybean is Full */}
-          {chosenCrop === "Soybean" && chosenCentre === 1 && (
-            <div className="p-3.5 rounded-xl mb-4 border border-amber-300 bg-amber-50 animate-fade-in shadow-xs">
-              <div className="flex items-start gap-2.5">
-                <Compass className="text-amber-700 shrink-0 mt-0.5" size={18} />
-                <div className="text-xs flex-1">
-                  <div className="font-bold text-amber-950 flex items-center justify-between">
-                    <span>{lang === "hi" ? "सीहोर मुख्य मंडी सोयाबीन कोटा पूर्ण (100%)" : "Sehore Main Mandi Soybean Quota Full (100%)"}</span>
-                    <span className="bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded text-[10px] font-bold">10-km Mesh Active</span>
+          {/* CROP-SPECIFIC ROUTING LOGIC */}
+
+          {/* 1. If chosenCrop === "Soybean" AND !nearbyMandisFull */}
+          {chosenCrop === "Soybean" && !nearbyMandisFull && (
+            <>
+              {/* If Sehore is chosen, show reroute suggestion to Ichhawar */}
+              {chosenCentre === 1 && (
+                <div className="p-3.5 rounded-xl mb-3 border border-amber-300 bg-amber-50 animate-fade-in shadow-xs">
+                  <div className="flex items-start gap-2.5">
+                    <Compass className="text-amber-700 shrink-0 mt-0.5" size={18} />
+                    <div className="text-xs flex-1">
+                      <div className="font-bold text-amber-950 flex items-center justify-between">
+                        <span>{lang === "hi" ? "सीहोर मुख्य मंडी सोयाबीन कोटा पूर्ण (100%)" : "Sehore Main Mandi Soybean Quota Full (100%)"}</span>
+                        <span className="bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded text-[10px] font-bold">10-km Mesh Active</span>
+                      </div>
+                      <p className="text-amber-850 mt-1 leading-relaxed" style={{ color: "#78350f" }}>
+                        {lang === "hi"
+                          ? "सीहोर में बफर क्षमता समाप्त। 10-किमी क्लस्टर के तहत इछावर उप-मंडी (7.2 किमी दूर · 22 मिनट) में 420 MT कोटा और 0-वेट स्केल उपलब्ध है।"
+                          : "Sehore yard at 98% capacity. Nearest 10-km satellite: Ichhawar Sub-Mandi (7.2 km away · 22 min drive) has 420 MT open quota & zero-wait scale."}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setChosenCentre(2)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-700 text-white hover:bg-emerald-800 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                        >
+                          <Zap size={13} /> {lang === "hi" ? "इछावर उप-मंडी (7.2 किमी) में 1-टैप रीरूट लें" : "Accept 1-Tap Reroute to Ichhawar (7.2 km)"}
+                        </button>
+                        <span className="text-[11px] font-medium text-emerald-800">
+                          ✓ {lang === "hi" ? "सरकारी MSP ₹4,892 सुरक्षित" : "Full MSP ₹4,892 Guaranteed"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-amber-850 mt-1 leading-relaxed" style={{ color: "#78350f" }}>
-                    {lang === "hi"
-                      ? "सीहोर में बफर क्षमता समाप्त। 10-किमी क्लस्टर के तहत इछावर उप-मंडी (7.2 किमी दूर · 22 मिनट) में 420 MT कोटा और 0-वेट स्केल उपलब्ध है।"
-                      : "Sehore yard at 98% capacity. Nearest 10-km satellite: Ichhawar Sub-Mandi (7.2 km away · 22 min drive) has 420 MT open quota & zero-wait scale."}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                </div>
+              )}
+
+              {/* If Ichhawar is chosen, show active relief pass */}
+              {chosenCentre === 2 && (
+                <div className="p-3.5 rounded-xl mb-3 border border-emerald-300 bg-emerald-50 animate-fade-in shadow-xs">
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle2 className="text-emerald-700 shrink-0 mt-0.5" size={18} />
+                    <div className="text-xs flex-1">
+                      <div className="font-bold text-emerald-950 flex items-center justify-between">
+                        <span>{lang === "hi" ? "✓ 10-किमी रीरूट पास लागू: इछावर उप-मंडी (7.2 किमी)" : "✓ 10-km Reroute Pass Applied: Ichhawar Sub-Mandi (7.2 km)"}</span>
+                        <span className="bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded text-[10px] font-bold">Relief Yard</span>
+                      </div>
+                      <p className="text-emerald-900 mt-1 leading-relaxed">
+                        {lang === "hi"
+                          ? "इछावर उप-मंडी में 420 MT खुला सरकारी कोटा उपलब्ध है। शून्य प्रतीक्षा समय + J-फॉर्म पर ₹3.50/किमी-क्विंटल ईंधन परिवहन भत्ता क्रेडिट शामिल है।"
+                          : "420 MT open government MSP quota at Ichhawar. Guaranteed zero yard waiting time + ₹3.50/km-quintal transit fuel subsidy added to your e-J-Form."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sovereign Mandi Protection Notice */}
+              <div className="p-3 rounded-xl mb-4 border border-blue-200 bg-blue-50/70 text-xs">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5 font-bold text-blue-950">
+                    <Lock size={14} className="text-blue-700" />
+                    <span>{lang === "hi" ? "संप्रभु खरीद नियम: B2B ऑफ-रैंप सुरक्षित रूप से लॉक" : "Sovereign Rule: B2B Off-Ramp Locked"}</span>
+                  </div>
+                  <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                    {lang === "hi" ? "सरकारी कोटा शेष" : "Cluster Quota Open"}
+                  </span>
+                </div>
+                <p className="text-blue-900 leading-relaxed text-[11px]">
+                  {lang === "hi"
+                    ? "जब तक 10-किमी क्लस्टर में नजदीकी सरकारी मंडी (इछावर उप-मंडी) में स्लॉट उपलब्ध हैं, तब तक निजी B2B खरीद सक्रिय नहीं होगी। किसानों को पहले सरकारी MSP केंद्र उपलब्ध कराया जाता है।"
+                    : "Under state procurement policy, private B2B off-ramps remain inactive while nearby cluster mandis (Ichhawar Sub-Mandi) have 420 MT open government MSP capacity."}
+                </p>
+                <div className="mt-2.5 pt-2 border-t border-blue-200/80 flex items-center justify-between">
+                  <span className="text-[10px] text-blue-800 font-semibold">
+                    {lang === "hi" ? "SIH ज्यूरी परीक्षण सिमुलेटर:" : "SIH Jury Evaluator Mode:"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setNearbyMandisFull(true)}
+                    className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-white transition cursor-pointer flex items-center gap-1 shadow-xs"
+                  >
+                    <Zap size={12} />
+                    <span>{lang === "hi" ? "⚡ अनुकरण: यदि सभी पास की मंडियां फुल हों" : "⚡ Simulate: If all nearby mandis are full (0 slots)"}</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* 2. If chosenCrop === "Soybean" AND nearbyMandisFull (ALL NEARBY MANDIS FULL) */}
+          {chosenCrop === "Soybean" && nearbyMandisFull && (
+            <div>
+              {/* Macro Saturated Alert */}
+              <div className="p-3.5 rounded-xl mb-4 border-2 border-red-300 bg-red-50 animate-fade-in shadow-xs">
+                <div className="flex items-start gap-2.5">
+                  <ShieldAlert className="text-red-700 shrink-0 mt-0.5" size={20} />
+                  <div className="text-xs flex-1">
+                    <div className="flex items-center justify-between font-bold text-red-950">
+                      <span>{lang === "hi" ? "🚨 सभी नजदीकी मंडियों में सरकारी कोटा पूर्ण (0 स्लॉट शेष)" : "🚨 Regional Quota Full: 0 Slots in Any Nearby Mandi"}</span>
+                      <span className="bg-red-200 text-red-900 px-2 py-0.5 rounded text-[10px] font-bold">100% Saturated</span>
+                    </div>
+                    <p className="text-red-900 mt-1 leading-relaxed text-[11px]">
+                      {lang === "hi"
+                        ? "सीहोर मुख्य मंडी (0 MT), इछावर उप-मंडी (0 MT), और बिलकिसगंज (0 MT) सभी में 100% सरकारी कोटा भर चुका है। रीरूटिंग या सरकारी प्राथमिकता कतार के लिए 25 किमी में कोई सरकारी स्लॉट नहीं है।"
+                        : "Sehore Hub (0 MT), Ichhawar Sub-Mandi (0 MT), and Bilkisganj (0 MT) have exhausted 100% of district MSP procurement quota. No government slots exist within 25 km."}
+                    </p>
+                    <div className="mt-2.5 flex items-center justify-between bg-red-100/90 p-2 rounded-lg text-[11px] text-red-950">
+                      <span>{lang === "hi" ? "सरकारी कोटा समाप्त होने पर B2B इंडस्ट्रियल ऑफ-रैंप सक्रिय:" : "Government quota exhausted → B2B Industrial Off-Ramp engaged:"}</span>
+                      <button
+                        type="button"
+                        onClick={() => setNearbyMandisFull(false)}
+                        className="text-red-700 hover:text-red-900 font-bold underline cursor-pointer"
+                      >
+                        {lang === "hi" ? "↺ रीसेट: इछावर में 420 MT कोटा खोलें" : "↺ Restore: Ichhawar open (420 MT)"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* B2B Industrial Off-Ramp Card */}
+              <div className="p-4 rounded-2xl mb-4 border-2 border-emerald-500 bg-gradient-to-br from-emerald-50/90 to-teal-50/80 shadow-md">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-xs">
+                      <Building2 size={18} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-emerald-950 flex items-center gap-1.5">
+                        <span>{lang === "hi" ? "B2B इंडस्ट्रियल ऑफ-रैंप अनलॉक" : "B2B Industrial Off-Ramp Unlocked"}</span>
+                        <span className="bg-emerald-200 text-emerald-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                          {lang === "hi" ? "इमरजेंसी फॉलओवर" : "Emergency Failover"}
+                        </span>
+                      </h4>
+                      <div className="text-[11px] text-emerald-800">
+                        {lang === "hi" ? "मध्य प्रदेश भावांतर भुगतान ढाल · पूर्ण MSP ₹4,892 सुरक्षित" : "MP Bhavantar Bhugtan Shield · Full MSP ₹4,892 Guaranteed"}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowTxModal(true)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-800 bg-white/80 border border-emerald-300 hover:bg-white hover:text-emerald-900 transition flex items-center gap-1 cursor-pointer shadow-xs shrink-0"
+                  >
+                    <Info size={13} />
+                    <span>{lang === "hi" ? "B2B लेन-देन कैसे होगा?" : "How B2B Tx Works?"}</span>
+                  </button>
+                </div>
+
+                <p className="text-xs text-emerald-900 mb-3 leading-relaxed">
+                  {lang === "hi"
+                    ? "नजदीकी मंडियों में स्लॉट न होने पर संकटकालीन बिक्री (Distress Sale) से बचाने हेतु किसानसेतु मान्यता प्राप्त क्रशिंग मिलों को सीधे गेट-पास आवंटित करता है। कॉर्पोरेट बोली और MSP के अंतर की राशि राज्य सरकार भावांतर DBT के तहत सीधे बैंक खाते में जमा करेगी।"
+                    : "To prevent distress sales to local middlemen at ₹3,200/Qtl, KisanSetu routes your lot directly to accredited industrial crushers with State Government Bhavantar DBT price protection guaranteeing ₹4,892/Qtl."}
+                </p>
+
+                {/* Accredited Industrial Buyers Selector */}
+                <label className="text-xs font-semibold block mb-1.5 text-emerald-950">
+                  {lang === "hi" ? "प्रमाणित औद्योगिक खरीदार चुनें:" : "Select Accredited Industrial Processor:"}
+                </label>
+                <div className="space-y-2 mb-3">
+                  {b2bBuyers.map((b) => (
                     <button
+                      key={b.id}
                       type="button"
-                      onClick={() => setChosenCentre(2)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-700 text-white hover:bg-emerald-800 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                      onClick={() => setSelectedBuyer(b.id)}
+                      className="w-full p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between"
+                      style={{
+                        background: selectedBuyer === b.id ? "#ffffff" : "rgba(255,255,255,0.6)",
+                        borderColor: selectedBuyer === b.id ? "var(--green-deep)" : "#cbd5e1",
+                        borderWidth: selectedBuyer === b.id ? 2 : 1,
+                        boxShadow: selectedBuyer === b.id ? "0 2px 8px rgba(16,185,129,0.15)" : "none",
+                      }}
                     >
-                      <Zap size={13} /> {lang === "hi" ? "इछावर उप-मंडी (7.2 किमी) में 1-टैप रीरूट लें" : "Accept 1-Tap Reroute to Ichhawar (7.2 km)"}
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-sm text-slate-900">{b.name}</span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                            {b.badge}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-600 mt-0.5">
+                          {b.fullName} &middot; {b.bay}
+                        </div>
+                        <div className="text-xs font-bold text-emerald-800 mt-1">
+                          कॉर्पोरेट बोली: ₹{b.corporateBid} + भावांतर DBT: ₹{b.bhavantarDbt} ={" "}
+                          <span className="text-emerald-900">₹{b.netMsp}/क्विंटल (पूर्ण MSP)</span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className={`inline-block w-4 h-4 rounded-full border-2 ${selectedBuyer === b.id ? "border-emerald-600 bg-emerald-600" : "border-slate-300"}`} />
+                      </div>
                     </button>
-                    <span className="text-[11px] font-medium text-emerald-800">
-                      ✓ {lang === "hi" ? "सरकारी MSP ₹4,892 सुरक्षित" : "Full MSP ₹4,892 Guaranteed"}
-                    </span>
+                  ))}
+                </div>
+
+                {/* Quantity input */}
+                <div className="mb-3 p-3 rounded-xl bg-white border border-emerald-200">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="text-xs font-semibold text-slate-700">
+                      {lang === "hi" ? "सोयाबीन मात्रा (क्विंटल):" : "Soybean Quantity (Quintals):"}
+                    </label>
+                    <span className="text-sm font-bold text-emerald-800">{b2bQuantity} Quintals ({b2bQuantity * 100} kg)</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10"
+                    max="80"
+                    step="5"
+                    value={b2bQuantity}
+                    onChange={(e) => setB2bQuantity(Number(e.target.value))}
+                    className="w-full accent-emerald-700 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
+                    <span>10 Qtl</span>
+                    <span>35 Qtl (Standard Trolley)</span>
+                    <span>80 Qtl</span>
                   </div>
                 </div>
+
+                {/* Financial Realization Card */}
+                {(() => {
+                  const activeB = b2bBuyers.find((x) => x.id === selectedBuyer) || b2bBuyers[0];
+                  const corpTotal = b2bQuantity * activeB.corporateBid;
+                  const dbtTotal = b2bQuantity * activeB.bhavantarDbt;
+                  const netTotal = b2bQuantity * 4892;
+                  return (
+                    <div
+                      className="p-3.5 rounded-xl mb-3 shadow-sm"
+                      style={{ background: "#064e3b", color: "#ffffff", border: "1.5px solid #059669" }}
+                    >
+                      <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#a7f3d0" }}>
+                        {lang === "hi" ? "भुगतान और भावांतर गारंटी ब्रेकडाउन" : "Payment & Bhavantar Guarantee Breakdown"}
+                      </div>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between items-center">
+                          <span style={{ color: "#d1fae5" }}>कॉर्पोरेट मिल सीधा भुगतान (RTGS):</span>
+                          <span className="font-bold text-sm" style={{ color: "#ffffff" }}>₹{corpTotal.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span style={{ color: "#d1fae5" }}>मध्य प्रदेश सरकार भावांतर DBT (बैंक खाता):</span>
+                          <span className="font-bold text-sm" style={{ color: "#fcd34d" }}>+ ₹{dbtTotal.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div style={{ height: "1px", background: "#059669", margin: "6px 0" }} />
+                        <div className="flex justify-between items-center font-bold text-sm pt-0.5">
+                          <span style={{ color: "#ffffff" }}>कुल प्राप्त राशि (100% MSP संरक्षित):</span>
+                          <span className="text-base font-extrabold" style={{ color: "#34d399" }}>₹{netTotal.toLocaleString("en-IN")}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <button
+                  type="button"
+                  onClick={handleB2BBooking}
+                  className="w-full py-3.5 px-4 rounded-xl font-bold text-sm transition cursor-pointer flex items-center justify-center gap-2 shadow-md"
+                  style={{ background: "#047857", color: "#ffffff", border: "1px solid #059669" }}
+                  onMouseOver={(e) => (e.currentTarget.style.background = "#065f46")}
+                  onMouseOut={(e) => (e.currentTarget.style.background = "#047857")}
+                >
+                  <Building2 size={16} />
+                  <span>{lang === "hi" ? "B2B फैक्ट्री गेट पास बुक करें (भावांतर शील्ड सहित) →" : "Lock B2B Factory Gate Pass with Bhavantar Shield →"}</span>
+                </button>
               </div>
             </div>
           )}
 
-          {/* Banner showing active 10-km reroute pass when Ichhawar is selected */}
-          {chosenCrop === "Soybean" && chosenCentre === 2 && (
-            <div className="p-3.5 rounded-xl mb-4 border border-emerald-300 bg-emerald-50 animate-fade-in shadow-xs">
-              <div className="flex items-start gap-2.5">
-                <CheckCircle2 className="text-emerald-700 shrink-0 mt-0.5" size={18} />
-                <div className="text-xs flex-1">
-                  <div className="font-bold text-emerald-950 flex items-center justify-between">
-                    <span>{lang === "hi" ? "✓ 10-किमी रीरूट पास लागू: इछावर उप-मंडी (7.2 किमी)" : "✓ 10-km Reroute Pass Applied: Ichhawar Sub-Mandi (7.2 km)"}</span>
-                    <span className="bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded text-[10px] font-bold">Relief Yard</span>
+          {/* 3. If chosenCrop === "Vegetables" (NON-MSP HORTICULTURE) */}
+          {chosenCrop === "Vegetables" && (
+            <div className="p-4 rounded-2xl mb-4 border-2 border-emerald-500 bg-gradient-to-br from-emerald-50 to-amber-50 shadow-md">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-xs">
+                    <ShoppingBag size={18} />
                   </div>
-                  <p className="text-emerald-900 mt-1 leading-relaxed">
-                    {lang === "hi"
-                      ? "इछावर उप-मंडी में 420 MT खुला सरकारी कोटा उपलब्ध है। शून्य प्रतीक्षा समय + J-फॉर्म पर ₹3.50/किमी-क्विंटल ईंधन परिवहन भत्ता क्रेडिट शामिल है।"
-                      : "420 MT open government MSP quota at Ichhawar. Guaranteed zero yard waiting time + ₹3.50/km-quintal transit fuel subsidy added to your e-J-Form."}
-                  </p>
+                  <div>
+                    <h4 className="font-bold text-sm text-emerald-950 flex items-center gap-1.5">
+                      <span>{lang === "hi" ? "B2C फार्म-टू-फोर्क ONDC डायरेक्ट" : "B2C Farm-to-Fork via ONDC Direct"}</span>
+                      <span className="bg-emerald-200 text-emerald-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                        {lang === "hi" ? "शून्य बिचौलिया" : "Zero Middlemen"}
+                      </span>
+                    </h4>
+                    <div className="text-[11px] text-emerald-800">
+                      {lang === "hi" ? "सब्जियों पर कोई मंडी MSP नहीं · शहरी उपभोक्ता समूहों से 3 गुना अधिक कमाई" : "No Mandi MSP for Vegetables · 3x Earnings from Urban RWA Pools"}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTxModal(true)}
+                  className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer underline shrink-0"
+                >
+                  <Info size={13} />
+                  <span>{lang === "hi" ? "लेन-देन कैसे होगा?" : "How ONDC Tx Works?"}</span>
+                </button>
+              </div>
+
+              <p className="text-xs text-emerald-900 mb-3 leading-relaxed">
+                {lang === "hi"
+                  ? "सब्जियों की सरकारी खरीद मंडियों में नहीं होती। किसानसेतु ONDC ओपन नेटवर्क के माध्यम से भोपाल की हाउसिंग सोसायटियों (RWA) से सीधे प्री-ऑर्डर बैच से जोड़ता है।"
+                  : "Government mandis do not procure horticulture vegetables under MSP. KisanSetu directly connects your harvest to verified urban apartment consumer clusters via the ONDC Open Protocol."}
+              </p>
+
+              <div className="p-3 rounded-xl bg-white border border-emerald-200 mb-3 text-xs space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-600">लक्षित उपभोक्ता क्लस्टर:</span>
+                  <span className="font-bold text-slate-900">Arera Colony Residents Club, Bhopal (12 km)</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-600">मंडी आढ़ती कमीशन भाव:</span>
+                  <span className="line-through text-red-600 font-semibold">₹14 / kg</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-600">ONDC डायरेक्ट उपभोक्ता भाव:</span>
+                  <span className="font-bold text-emerald-800 text-sm">₹42 / kg (+300% लाभ)</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-600">प्री-ऑर्डर बैच मात्रा:</span>
+                  <span className="font-semibold text-slate-800">15 क्विंटल (1,500 किग्रा)</span>
+                </div>
+                <div className="h-px bg-slate-200 my-1" />
+                <div className="flex justify-between items-center font-bold text-emerald-950">
+                  <span>कुल सीधी किसान आय (UPI Escrow):</span>
+                  <span className="text-emerald-700 text-sm">₹63,000</span>
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={handleB2CBooking}
+                className="w-full py-3.5 px-4 rounded-xl font-bold text-sm bg-emerald-700 hover:bg-emerald-800 text-white transition cursor-pointer flex items-center justify-center gap-2 shadow-md"
+              >
+                <ShoppingBag size={16} />
+                <span>{lang === "hi" ? "ONDC डायरेक्ट डिलीवरी बैच स्वीकार करें →" : "Accept ONDC Farm-to-Fork Batch Pass →"}</span>
+              </button>
             </div>
           )}
 
-          {/* Centre Selector */}
-          <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--charcoal-60)" }}>
-            {lang === "hi" ? "खरीद केंद्र चुनें (10-किमी क्लस्टर नेटवर्क):" : "Choose Procurement Centre (10-km Cluster Network):"}
-          </label>
-          <select
-            value={chosenCentre}
-            onChange={(e) => setChosenCentre(Number(e.target.value))}
-            className="w-full p-2.5 rounded-xl text-sm mb-4 border"
-            style={{ borderColor: "var(--border)", background: "#fff" }}
-          >
-            {centres.map((c) => (
-              <option key={c.id} value={c.id}>
-                {lang === "hi" ? c.name_hi : c.name} {c.distanceKm > 0 ? `(${c.distanceKm} km · ${c.type})` : `(${c.type})`}
-              </option>
-            ))}
-          </select>
+          {/* 4. STANDARD GOVT MANDI SELECTOR (For Wheat, Paddy, Mustard, or Soybean when nearby mandis have quota) */}
+          {chosenCrop !== "Vegetables" && !(chosenCrop === "Soybean" && nearbyMandisFull) && (
+            <>
+              {/* Centre Selector */}
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--charcoal-60)" }}>
+                {lang === "hi" ? "खरीद केंद्र चुनें (10-किमी क्लस्टर नेटवर्क):" : "Choose Procurement Centre (10-km Cluster Network):"}
+              </label>
+              <select
+                value={chosenCentre}
+                onChange={(e) => setChosenCentre(Number(e.target.value))}
+                className="w-full p-2.5 rounded-xl text-sm mb-4 border"
+                style={{ borderColor: "var(--border)", background: "#fff" }}
+              >
+                {centres.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {lang === "hi" ? c.name_hi : c.name} {c.distanceKm > 0 ? `(${c.distanceKm} km · ${c.type})` : `(${c.type})`}
+                  </option>
+                ))}
+              </select>
 
-          {/* Date Selector */}
-          <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--charcoal-60)" }}>
-            {lang === "hi" ? "तारीख:" : "Procurement Date:"}
-          </label>
-          <input
-            type="date"
-            value={chosenDate}
-            onChange={(e) => setChosenDate(e.target.value)}
-            className="w-full p-2.5 rounded-xl text-sm mb-5 border"
-            style={{ borderColor: "var(--border)", background: "#fff" }}
-          />
+              {/* Date Selector */}
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--charcoal-60)" }}>
+                {lang === "hi" ? "तारीख:" : "Procurement Date:"}
+              </label>
+              <input
+                type="date"
+                value={chosenDate}
+                onChange={(e) => setChosenDate(e.target.value)}
+                className="w-full p-2.5 rounded-xl text-sm mb-5 border"
+                style={{ borderColor: "var(--border)", background: "#fff" }}
+              />
 
-          <button
-            onClick={() => {
-              loadSlotsForSelection();
-              setStep(2);
-            }}
-            className="ks-btn ks-btn-primary w-full py-3 text-sm font-semibold"
-          >
-            {lang === "hi" ? "उपलब्ध स्लॉट देखें →" : "Find Available Slots →"}
-          </button>
+              <button
+                onClick={() => {
+                  loadSlotsForSelection();
+                  setStep(2);
+                }}
+                className="ks-btn ks-btn-primary w-full py-3 text-sm font-semibold"
+              >
+                {lang === "hi" ? "उपलब्ध स्लॉट देखें →" : "Find Available Slots →"}
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -929,6 +1752,19 @@ function BookSlot({ onConfirmed, onSwitchToIVR, lang = "en" }) {
             </div>
           ) : (
             <>
+              {/* If Soybean rerouted to Ichhawar Sub-Mandi */}
+              {chosenCrop === "Soybean" && chosenCentre === 2 && (
+                <div className="p-3 rounded-xl mb-3 border border-emerald-300 bg-emerald-50 text-xs flex items-center gap-2">
+                  <Compass size={16} className="text-emerald-700 shrink-0" />
+                  <div className="text-emerald-950">
+                    <strong>{lang === "hi" ? "10-किमी रिलीफ यार्ड सक्रिय:" : "10-km Relief Yard Active:"}</strong>{" "}
+                    {lang === "hi"
+                      ? "इछावर उप-मंडी (7.2 किमी) · 420 MT खुला सरकारी कोटा · 0-वेट एक्सप्रेस लेन · ₹3.50/किमी ईंधन भत्ता e-J-फॉर्म पर स्वतः जुड़ा।"
+                      : "Ichhawar Sub-Mandi (7.2 km) · 420 MT open government MSP quota · 0-wait express intake · ₹3.50/km fuel transit subsidy added to e-J-Form."}
+                  </div>
+                </div>
+              )}
+
               {/* Dynamic Recommended Slot Card */}
               {recommendedSlot && (
                 <div className="ks-card p-4 mb-3" style={{ borderColor: "var(--green-deep)", borderWidth: 1.5 }}>
@@ -1049,11 +1885,213 @@ function BookSlot({ onConfirmed, onSwitchToIVR, lang = "en" }) {
 /* ------------------------------------------------------------------ */
 
 function Confirmation({ booking, setView, lang = "en" }) {
+  const [showTxModal, setShowTxModal] = useState(false);
+  const isB2B = booking?.channel === "b2b";
+  const isB2C = booking?.channel === "b2c";
   const token = booking?.token || FARMER.token;
   const slotDate = booking?.slotDate || FARMER.slotDate;
   const slotTime = booking?.slotTime || FARMER.slotTime;
   const centreName = booking?.centreName || FARMER.centre[lang];
   const crop = booking?.crop || (lang === "hi" ? FARMER.crop.hi : FARMER.crop.en);
+
+  if (isB2B) {
+    const b2b = booking?.b2bDetails || {};
+    return (
+      <div className="text-center">
+        <TransactionExplainerModal isOpen={showTxModal} onClose={() => setShowTxModal(false)} lang={lang} />
+        <div className="flex items-center justify-center rounded-full mx-auto mb-4" style={{ width: 60, height: 60, background: "var(--green-bg)" }}>
+          <Building2 size={30} style={{ color: "var(--green-deep)" }} />
+        </div>
+        <h2 className="ks-display text-xl font-bold mb-1">
+          {lang === "hi" ? "🏭 B2B फैक्ट्री गेट पास पक्का हुआ!" : "🏭 B2B Factory Gate Pass Confirmed!"}
+        </h2>
+        <p className="text-sm mb-4" style={{ color: "var(--charcoal-60)" }}>
+          {centreName} &middot; {crop} ({b2b.quantity || 35} Qtl)
+        </p>
+
+        <div className="ks-card p-5 mb-4 text-left">
+          {/* MP Bhavantar Shield Banner */}
+          <div className="p-3 mb-3.5 rounded-xl border border-emerald-300 bg-emerald-50 text-xs text-emerald-950">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+                <ShieldCheck size={16} className="text-emerald-700" />
+                <span>{lang === "hi" ? "मध्य प्रदेश भावांतर मूल्य सुरक्षा ढाल लागू" : "MP Bhavantar Price Shield Applied"}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTxModal(true)}
+                className="text-[10px] font-bold text-emerald-800 underline cursor-pointer"
+              >
+                {lang === "hi" ? "प्रणाली देखें" : "How it settles"}
+              </button>
+            </div>
+            <p className="text-[11px] leading-relaxed text-emerald-900">
+              {lang === "hi"
+                ? "सरकारी मंडी क्षमता पूर्ण होने के कारण यह लॉट प्रमाणित औद्योगिक मिल में आवंटित किया गया है। राज्य सरकार भावांतर DBT के माध्यम से ₹4,892 MSP की पूर्ण कानूनी गारंटी देती है।"
+                : "Allocated to certified industrial processing due to regional mandi capacity saturation. Full MSP ₹4,892/Qtl is legally guaranteed via MP State Bhavantar DBT."}
+            </p>
+          </div>
+
+          <div className="text-sm mb-3" style={{ color: "var(--charcoal-60)" }}>
+            {slotDate} &middot; {slotTime}
+          </div>
+
+          <div className="text-xs uppercase font-bold text-center" style={{ color: "var(--green-deep)", letterSpacing: "1px" }}>
+            Corporate Weighbridge Gate Pass
+          </div>
+          <div className="flex justify-center my-3">
+            <TokenQRCode token={token} size={145} />
+          </div>
+
+          {/* Payment Breakdown Card */}
+          <div className="p-3 rounded-xl bg-slate-900 text-white mb-3 text-xs space-y-1.5">
+            <div className="font-bold text-emerald-400 uppercase text-[10px] tracking-wider mb-1">
+              {lang === "hi" ? "पारदर्शी भुगतान विवरण" : "Transparent Settlement Breakdown"}
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-300">कॉर्पोरेट सीधा भुगतान (RTGS):</span>
+              <span className="font-semibold">₹{(b2b.corporateTotal || 165200).toLocaleString("en-IN")}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-300">मध्य प्रदेश सरकार भावांतर DBT (बैंक खाता):</span>
+              <span className="font-semibold text-amber-300">+ ₹{(b2b.bhavantarTotal || 6020).toLocaleString("en-IN")}</span>
+            </div>
+            <div className="h-px bg-slate-700 my-1" />
+            <div className="flex justify-between font-bold text-sm">
+              <span>कुल शुद्ध आय (100% MSP संरक्षित):</span>
+              <span className="text-emerald-300">₹{(b2b.netTotal || 171220).toLocaleString("en-IN")}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              playChime();
+              const speech = lang === "hi"
+                ? `बधाई हो! आपका बी टू बी फैक्ट्री गेट पास नंबर ${token} पक्का हो गया है। केंद्र ${centreName}। समय ${slotTime}। कुल शुद्ध प्राप्ति 1 लाख 71 हजार 220 रुपये, एमएसपी 4892 सुरक्षित। फैक्ट्री गेट पर यह क्यू आर पास दिखाएं।`
+                : `Congratulations! Your B2B factory gate pass ${token} is confirmed at ${centreName}. Time slot: ${slotTime}. Guaranteed MSP ₹4,892 protected via Bhavantar DBT. Present this QR pass at factory weighbridge.`;
+              speakVernacular(speech, lang);
+            }}
+            className="ks-btn flex items-center justify-center gap-1.5 w-full py-2.5 mb-3 text-xs font-bold rounded-xl border border-emerald-300 text-emerald-900 bg-emerald-50 hover:bg-emerald-100 cursor-pointer transition-all"
+          >
+            <Volume2 size={16} className="text-emerald-700" />
+            <span>{lang === "hi" ? "🔊 बोलकर सुनें (फैक्ट्री पास ऑडियो)" : "🔊 Listen Factory Pass Audio"}</span>
+          </button>
+
+          <div className="text-xs mb-2 text-center" style={{ color: "var(--charcoal-60)" }}>
+            {lang === "hi" ? "फैक्ट्री वेईब्रिज पर यह QR कोड स्कैन करवाएं" : "Scan this QR code at factory weighbridge"}
+          </div>
+          <div className="flex justify-center">
+            <Badge tone="green" icon={Clock}>
+              {lang === "hi" ? "एक्सप्रेस फैक्ट्री बे #3 · प्रतीक्षा: ~10 मिनट" : "Express Bay #3 · Wait: ~10 min"}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <button onClick={() => setView("queue")} className="ks-btn ks-btn-primary py-3 flex items-center justify-center gap-2">
+            <Building2 size={16} />
+            <span>{lang === "hi" ? "लाइव फैक्ट्री बे कतार देखें" : "View Live Factory Bay Queue"}</span>
+          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setView("book")} className="ks-btn ks-btn-outline flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5">
+              <CalendarPlus size={14} /> {lang === "hi" ? "नया स्लॉट" : "Book Another"}
+            </button>
+            <button onClick={() => setView("dashboard")} className="ks-btn ks-btn-outline flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5">
+              <HomeIcon size={14} /> {lang === "hi" ? "होम" : "Home"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isB2C) {
+    const b2c = booking?.b2cDetails || {};
+    return (
+      <div className="text-center">
+        <div className="flex items-center justify-center rounded-full mx-auto mb-4" style={{ width: 60, height: 60, background: "var(--green-bg)" }}>
+          <ShoppingBag size={30} style={{ color: "var(--green-deep)" }} />
+        </div>
+        <h2 className="ks-display text-xl font-bold mb-1">
+          {lang === "hi" ? "🛍️ ONDC डायरेक्ट डिस्पैच बैच पक्का हुआ!" : "🛍️ ONDC Direct Dispatch Confirmed!"}
+        </h2>
+        <p className="text-sm mb-4" style={{ color: "var(--charcoal-60)" }}>
+          {centreName} &middot; {crop} ({b2c.quantity || 15} Qtl)
+        </p>
+
+        <div className="ks-card p-5 mb-4 text-left">
+          <div className="p-3 mb-3.5 rounded-xl border border-emerald-300 bg-emerald-50 text-xs text-emerald-950">
+            <div className="flex items-center gap-1.5 font-bold mb-1 text-emerald-900">
+              <CheckCircle2 size={16} className="text-emerald-700" />
+              <span>{lang === "hi" ? "शून्य बिचौलिया ONDC फार्म-टू-फोर्क प्रोटोकॉल" : "Zero Middlemen ONDC Protocol Active"}</span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-emerald-900">
+              {lang === "hi"
+                ? "सब्जियों पर मंडी MSP न होने के कारण लॉट को सीधे भोपाल RWA हाउसिंग सोसायटियों से जोड़ा गया है। आढ़ती कमीशन ₹14/किग्रा के मुकाबले ₹42/किग्रा का भाव मिला है।"
+                : "Non-MSP horticulture harvest directly linked to verified urban residential RWA pre-order pool at ₹42/kg vs Mandi commission rate of ₹14/kg."}
+            </p>
+          </div>
+
+          <div className="text-sm mb-3" style={{ color: "var(--charcoal-60)" }}>
+            {slotDate} &middot; {slotTime}
+          </div>
+
+          <div className="text-xs uppercase font-bold text-center" style={{ color: "var(--green-deep)", letterSpacing: "1px" }}>
+            ONDC Logistics Vehicle Pass
+          </div>
+          <div className="flex justify-center my-3">
+            <TokenQRCode token={token} size={145} />
+          </div>
+
+          {/* Earnings Card */}
+          <div className="p-3 rounded-xl bg-emerald-950 text-white mb-3 text-xs space-y-1.5">
+            <div className="flex justify-between">
+              <span className="text-emerald-200">डायरेक्ट उपभोक्ता भाव:</span>
+              <span className="font-semibold text-emerald-300">₹42 / kg</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-emerald-200">कुल मात्रा:</span>
+              <span className="font-semibold">1,500 kg (15 Quintals)</span>
+            </div>
+            <div className="h-px bg-emerald-800 my-1" />
+            <div className="flex justify-between font-bold text-sm">
+              <span>कुल सीधी किसान आय (UPI Escrow):</span>
+              <span className="text-emerald-300">₹{(b2c.totalEarnings || 63000).toLocaleString("en-IN")}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              playChime();
+              const speech = lang === "hi"
+                ? `बधाई हो! आपका ONDC डायरेक्ट डिस्पैच टोकन ${token} पक्का हो गया है। उपभोक्ता क्लस्टर ${centreName}। समय ${slotTime}। कुल आय 63 हजार रुपये।`
+                : `Congratulations! Your ONDC dispatch token ${token} is confirmed for ${centreName}. Dispatch time: ${slotTime}. Total direct realization: ₹63,000.`;
+              speakVernacular(speech, lang);
+            }}
+            className="ks-btn flex items-center justify-center gap-1.5 w-full py-2.5 mb-3 text-xs font-bold rounded-xl border border-emerald-300 text-emerald-900 bg-emerald-50 hover:bg-emerald-100 cursor-pointer transition-all"
+          >
+            <Volume2 size={16} className="text-emerald-700" />
+            <span>{lang === "hi" ? "🔊 बोलकर सुनें (डिस्पैच ऑडियो)" : "🔊 Listen Dispatch Audio"}</span>
+          </button>
+
+          <div className="text-xs mb-2 text-center" style={{ color: "var(--charcoal-60)" }}>
+            {lang === "hi" ? "डिस्पैच वाहन चालक को यह QR कोड दिखाएं" : "Show this QR code to the dispatch logistics driver"}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <button onClick={() => setView("book")} className="ks-btn ks-btn-outline flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5">
+              <CalendarPlus size={14} /> {lang === "hi" ? "नया स्लॉट" : "Book Another"}
+            </button>
+            <button onClick={() => setView("dashboard")} className="ks-btn ks-btn-primary flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5">
+              <HomeIcon size={14} /> {lang === "hi" ? "होम" : "Home"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="text-center">
@@ -1141,9 +2179,16 @@ function Confirmation({ booking, setView, lang = "en" }) {
 /* ------------------------------------------------------------------ */
 
 function LiveQueue({ ahead, setAhead, current, setCurrent, activeBooking }) {
-  const myToken = activeBooking?.token || FARMER.token;
+  const isInitialB2B = activeBooking?.channel === "b2b" || (activeBooking?.token && activeBooking.token.startsWith("B2B"));
+  const [queueMode, setQueueMode] = useState(isInitialB2B ? "b2b" : "govt");
+  const myToken = activeBooking?.token || (queueMode === "b2b" ? "B2B-ITC-98217" : FARMER.token);
   const [queueData, setQueueData] = useState(null);
   const [priorityNotice, setPriorityNotice] = useState(null);
+
+  // B2B state
+  const [b2bCurrent, setB2bCurrent] = useState("B2B-ITC-98214");
+  const [b2bAhead, setB2bAhead] = useState(["B2B-ITC-98215"]);
+  const [b2bNotice, setB2bNotice] = useState(null);
 
   const fetchQueue = () => {
     getQueue(1, null).then((data) => {
@@ -1212,178 +2257,391 @@ function LiveQueue({ ahead, setAhead, current, setCurrent, activeBooking }) {
     }
   };
 
+  const advanceB2B = () => {
+    playChime();
+    if (b2bAhead.length > 0) {
+      const nextCalling = b2bAhead[0];
+      setB2bCurrent(nextCalling);
+      setB2bAhead([]);
+      setB2bNotice(`⚡ B2B वेईब्रिज कॉल: ${nextCalling} का वजन पूरा हुआ। अगला टोकन ${myToken} (दिनेश यादव · 35 क्विंटल) बे नंबर 3 पर आमंत्रित है।`);
+      speakVernacular(`टोकन ${myToken}, कृपया वेईब्रिज बे नंबर 3 पर आएं।`, "hi");
+    } else {
+      setB2bCurrent(myToken);
+      setB2bNotice(`✓ B2B लॉट स्वीकृत: दिनेश यादव (सोयाबीन · 35 Qtl) का वेईब्रिज वज़न 3,850 किग्रा दर्ज हुआ। ITC भुगतान ₹1,65,200 RTGS + भावांतर DBT ₹6,020 सीधे खाते में प्रेषित!`);
+      speakVernacular(`टोकन ${myToken}, आपकी खरीद पूर्ण हुई। भावांतर डीबीटी रिकॉर्ड लॉक हो गया है।`, "hi");
+    }
+  };
+
+  const resetB2B = () => {
+    setB2bCurrent("B2B-ITC-98214");
+    setB2bAhead(["B2B-ITC-98215"]);
+    setB2bNotice(null);
+  };
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
-        <h2 className="ks-display text-xl font-bold">Live Queue</h2>
-        <span className="ks-badge ks-badge-green text-xs" style={{ fontSize: "10px" }}>
-          ⚡ Perishability Priority Active
-        </span>
+      {/* Queue Mode Switcher */}
+      <div className="flex items-center gap-2 p-1.5 rounded-2xl mb-4 bg-slate-100 border border-slate-200">
+        <button
+          type="button"
+          onClick={() => setQueueMode("govt")}
+          className="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+          style={{
+            background: queueMode === "govt" ? "#ffffff" : "transparent",
+            color: queueMode === "govt" ? "var(--green-deep)" : "var(--charcoal-60)",
+            boxShadow: queueMode === "govt" ? "0 2px 6px rgba(0,0,0,0.08)" : "none",
+          }}
+        >
+          <Landmark size={14} />
+          <span>🏛️ Govt Mandi Queue</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setQueueMode("b2b")}
+          className="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+          style={{
+            background: queueMode === "b2b" ? "#ffffff" : "transparent",
+            color: queueMode === "b2b" ? "#047857" : "var(--charcoal-60)",
+            boxShadow: queueMode === "b2b" ? "0 2px 6px rgba(0,0,0,0.08)" : "none",
+          }}
+        >
+          <Building2 size={14} />
+          <span>🏭 B2B Industrial Factory Bay</span>
+        </button>
       </div>
-      <p className="text-sm mb-3" style={{ color: "var(--charcoal-60)" }}>{FARMER.centre.en} &middot; Counter 1</p>
 
-      {/* Visual Priority Triage Demonstrator */}
-      <div className="ks-card p-4 mb-4" style={{ background: "#ffffff", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: "var(--green-bg)", color: "var(--green-deep)" }}
+      {/* B2B INDUSTRIAL FACTORY BAY QUEUE */}
+      {queueMode === "b2b" ? (
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="ks-display text-xl font-bold">Factory Bay Queue</h2>
+            <span className="ks-badge ks-badge-green text-xs" style={{ fontSize: "10px", background: "#d1fae5", color: "#065f46" }}>
+              🏭 ITC e-Choupal Hub &middot; Bay #3
+            </span>
+          </div>
+          <p className="text-sm mb-3" style={{ color: "var(--charcoal-60)" }}>
+            Sehore Logistics Hub &middot; Automated Weighbridge Bay #3
+          </p>
+
+          {/* Secondary Off-Ramp Explanatory Banner */}
+          <div className="p-3.5 mb-4 rounded-xl border border-emerald-300 bg-emerald-50 text-xs text-emerald-950 shadow-xs">
+            <div className="flex items-start gap-2">
+              <ShieldCheck size={16} className="text-emerald-700 shrink-0 mt-0.5" />
+              <div>
+                <strong>B2B Industrial Off-Ramp Active:</strong> When government mandi quota is saturated, priority routing transfers to certified factory intake bays. Automated optical weighbridges record weights and trigger instant Bhavantar DBT payouts (₹4,892 MSP guaranteed).
+              </div>
+            </div>
+          </div>
+
+          {/* Current Calling & Your Token */}
+          <div className="ks-card p-4 mb-4 flex items-center justify-between">
+            <div>
+              <div className="text-xs" style={{ color: "var(--charcoal-60)" }}>Currently Weighing (Bay #3)</div>
+              <div className="ks-display text-2xl font-bold text-emerald-800">{b2bCurrent}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs" style={{ color: "var(--charcoal-60)" }}>Your Token</div>
+              <div className="ks-display text-2xl font-bold text-emerald-800">{myToken.startsWith("B2B") ? myToken : "B2B-ITC-98217"}</div>
+            </div>
+          </div>
+
+          {/* Progress / Waiting Card */}
+          <div className="ks-card p-4 mb-4 text-center">
+            <div className="ks-display text-3xl font-bold mb-1 text-emerald-900">{b2bAhead.length}</div>
+            <div className="text-sm mb-3" style={{ color: "var(--charcoal-60)" }}>
+              {b2bAhead.length === 0 ? "You are next on the weighbridge platform!" : `truck${b2bAhead.length === 1 ? "" : "s"} ahead of you at factory bay`}
+            </div>
+            <div className="ks-progress-track mb-3" style={{ height: 8 }}>
+              <div className="ks-progress-fill h-full bg-emerald-600" style={{ width: `${b2bAhead.length === 0 ? 100 : 50}%` }} />
+            </div>
+            <Badge tone="green" icon={TrendingUp}>
+              {b2bAhead.length === 0 ? "Fast-track weighbridge active · Proceed to Bay #3" : `Est. wait: ${b2bAhead.length * 8} min · Automated hydraulic tipper moving`}
+            </Badge>
+          </div>
+
+          {/* Demo Controls */}
+          <div className="flex items-center gap-2 mb-4">
+            <button
+              type="button"
+              onClick={advanceB2B}
+              className="ks-btn flex-1 py-2.5 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition"
             >
               <Zap size={14} />
-            </div>
-            <div>
-              <span className="font-bold text-xs text-slate-800">
-                AI Crop Perishability Prioritization
-              </span>
-              <span className="text-[10px] ml-2 font-semibold px-2 py-0.5 rounded-full" style={{ background: "var(--green-bg)", color: "var(--green-deep)" }}>
-                Active
-              </span>
-            </div>
-          </div>
-          <span className="text-[11px] text-slate-400 font-medium">FIFO Safe</span>
-        </div>
-
-        <p className="text-xs text-slate-600 leading-relaxed mb-3">
-          Perishable produce (Soybean, Mustard · 5-day shelf life) is automatically prioritized to the front of the waiting queue. Standard grains (Wheat · 90-day shelf life) wait their turn safely in line without leaving the queue.
-        </p>
-
-        {/* Demo Controls */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={async () => {
-              playChime();
-              setPriorityNotice("⚡ Priority Jump in Action: Dinesh Yadav (Soybean, 5-day shelf life) prioritized to Pos #2! 4 Wheat farmers shifted to wait safely behind without leaving the queue.");
-              try {
-                await fetch("/api/slots/book", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ farmer_id: "FR-98217", centre_id: 1, slot_id: 1 }),
-                });
-              } catch (e) {}
-              fetchQueue();
-            }}
-            className="ks-btn ks-btn-primary flex-1 py-2 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <Zap size={13} />
-            <span>Simulate Soybean Priority Jump</span>
-          </button>
-          <button
-            type="button"
-            onClick={async () => {
-              await resetQueue(1);
-              setPriorityNotice("Queue restored to standard baseline.");
-              fetchQueue();
-            }}
-            className="ks-btn ks-btn-outline py-2 px-3 text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer"
-            title="Reset queue"
-          >
-            <RotateCcw size={12} />
-            <span>Reset</span>
-          </button>
-        </div>
-
-        {priorityNotice && (
-          <div className="mt-3 text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 flex items-start gap-2 animate-fade-in">
-            <Info size={14} className="text-amber-600 shrink-0 mt-0.5" />
-            <span>{priorityNotice}</span>
-          </div>
-        )}
-      </div>
-
-      <div className="ks-card p-4 mb-4 flex items-center justify-between">
-        <div>
-          <div className="text-xs" style={{ color: "var(--charcoal-60)" }}>Currently Calling</div>
-          <div className="ks-display text-2xl font-bold" style={{ color: "var(--green-deep)" }}>{current}</div>
-        </div>
-        <div className="text-right">
-          <div className="text-xs" style={{ color: "var(--charcoal-60)" }}>Your Token</div>
-          <div className="ks-display text-2xl font-bold" style={{ color: "var(--green-deep)" }}>{myToken}</div>
-        </div>
-      </div>
-
-      <div className="ks-card p-4 mb-4 text-center">
-        <div className="ks-display text-3xl font-bold mb-1">{ahead.length}</div>
-        <div className="text-sm mb-3" style={{ color: "var(--charcoal-60)" }}>
-          {ahead.length === 0 ? "You are next in line (Highest Priority)!" : `farmer${ahead.length === 1 ? "" : "s"} ahead of you`}
-        </div>
-        <div className="ks-progress-track mb-3" style={{ height: 8 }}>
-          <div className="ks-progress-fill h-full" style={{ width: `${Math.max(15, 100 - ahead.length * 18)}%` }} />
-        </div>
-        <Badge tone="green" icon={TrendingUp}>
-          {ahead.length === 0 ? "Priority fast-track active \u00b7 Proceed to Gate" : `Est. wait: ${ahead.length * 4} min \u00b7 Queue moving normally`}
-        </Badge>
-      </div>
-
-      <div className="space-y-2 mb-4">
-        {list.map((r, idx) => {
-          const isHigh = r.score >= 3;
-          const isMed = r.score === 2;
-          return (
-            <div
-              key={r.tok}
-              className="flex items-center justify-between px-3.5 py-3 rounded-xl text-sm transition-all"
-              style={
-                r.you
-                  ? { background: "var(--green-deep)", color: "#fff", boxShadow: "0 2px 8px rgba(31,77,54,0.25)" }
-                  : isHigh
-                  ? { background: "#fffdf5", border: "2px solid #f59e0b", boxShadow: "0 1px 4px rgba(245,158,11,0.15)" }
-                  : { background: "#fff", border: "1px solid var(--border)" }
-              }
+              <span>Advance Factory Weighbridge & Trigger DBT</span>
+            </button>
+            <button
+              type="button"
+              onClick={resetB2B}
+              className="ks-btn ks-btn-outline py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer"
+              title="Reset Factory Queue"
             >
-              <div className="flex items-center gap-2.5">
-                <span
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                  style={{
-                    background: r.you ? "rgba(255,255,255,0.25)" : isHigh ? "#fef3c7" : "var(--cream-2)",
-                    color: r.you ? "#fff" : isHigh ? "#92400e" : "var(--charcoal)",
-                  }}
-                >
-                  #{idx + 1}
-                </span>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold">{r.tok}</span>
-                    {r.farmer_name && (
-                      <span className="text-xs" style={{ opacity: r.you ? 0.9 : 0.7 }}>({r.farmer_name})</span>
-                    )}
-                  </div>
-                  <div className="text-[11px] mt-0.5 flex items-center gap-1" style={{ opacity: r.you ? 0.85 : 0.65 }}>
-                    <Wheat size={11} />
-                    <span>{r.crop}</span>
-                    <span>&bull;</span>
-                    <span>{isHigh ? "5-Day Shelf Life" : isMed ? "7-Day Shelf Life" : "90-Day Stable"}</span>
+              <RotateCcw size={12} />
+              <span>Reset</span>
+            </button>
+          </div>
+
+          {b2bNotice && (
+            <div className="mb-4 text-xs p-3 rounded-xl bg-emerald-100/70 border border-emerald-300 text-emerald-950 flex items-start gap-2 animate-fade-in">
+              <Info size={15} className="text-emerald-700 shrink-0 mt-0.5" />
+              <span>{b2bNotice}</span>
+            </div>
+          )}
+
+          {/* Bhavantar Telemetry Card */}
+          <div className="p-3.5 rounded-xl bg-slate-900 text-white mb-4 text-xs space-y-1.5">
+            <div className="flex justify-between items-center mb-1">
+              <span className="font-bold text-emerald-400 uppercase text-[10px] tracking-wider">Automated Weighbridge Telemetry</span>
+              <span className="bg-emerald-800 text-emerald-200 text-[10px] px-1.5 py-0.5 rounded font-bold">Grade A Verified</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-300">Moisture Sensor:</span>
+              <span className="font-semibold text-emerald-300">11.4% (Standard &lt; 12.0%)</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-300">Corporate RTGS (Direct from ITC):</span>
+              <span className="font-semibold">₹1,65,200</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-300">MP State Bhavantar DBT:</span>
+              <span className="font-semibold text-amber-300">+ ₹6,020 (Aadhaar DBT Escrow)</span>
+            </div>
+            <div className="h-px bg-slate-700 my-1" />
+            <div className="flex justify-between font-bold text-sm">
+              <span>Total Realized MSP:</span>
+              <span className="text-emerald-300">₹1,71,220 (₹4,892/Qtl Guaranteed)</span>
+            </div>
+          </div>
+
+          {/* Truck Queue List */}
+          <div className="space-y-2 mb-4">
+            {[
+              { tok: "B2B-ITC-98214", farmer: "Mohan Singh", crop: "Soybean", qtl: 32, status: "Done · Silo #2 Unloaded", bay: "Bay #2", done: true },
+              { tok: "B2B-ITC-98215", farmer: "Ramdas Gurjar", crop: "Soybean", qtl: 28, status: b2bAhead.length > 0 ? "Weighing in Progress" : "Done", bay: "Bay #3", active: b2bAhead.length > 0 },
+              { tok: "B2B-ITC-98217", farmer: "Dinesh Yadav (You)", crop: "Soybean", qtl: 35, status: b2bAhead.length === 0 ? "Serving at Weighbridge" : "Next in Line", bay: "Bay #3", you: true },
+              { tok: "B2B-ITC-98220", farmer: "Kailash Verma", crop: "Soybean", qtl: 40, status: "Holding Yard Gate", bay: "Bay #1", waiting: true },
+            ].map((r, idx) => (
+              <div
+                key={r.tok}
+                className="flex items-center justify-between px-3.5 py-3 rounded-xl text-sm transition-all"
+                style={
+                  r.you
+                    ? { background: "var(--green-deep)", color: "#fff", boxShadow: "0 2px 8px rgba(31,77,54,0.25)" }
+                    : r.active
+                    ? { background: "#fffdf5", border: "2px solid #10b981", boxShadow: "0 1px 4px rgba(16,185,129,0.15)" }
+                    : { background: "#fff", border: "1px solid var(--border)" }
+                }
+              >
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                    style={{
+                      background: r.you ? "rgba(255,255,255,0.25)" : r.active ? "#d1fae5" : "var(--cream-2)",
+                      color: r.you ? "#fff" : r.active ? "#065f46" : "var(--charcoal)",
+                    }}
+                  >
+                    #{idx + 1}
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold">{r.tok}</span>
+                      <span className="text-xs" style={{ opacity: r.you ? 0.9 : 0.7 }}>({r.farmer})</span>
+                    </div>
+                    <div className="text-[11px] mt-0.5 flex items-center gap-1" style={{ opacity: r.you ? 0.85 : 0.65 }}>
+                      <Building2 size={11} />
+                      <span>{r.crop} &middot; {r.qtl} Quintals</span>
+                      <span>&bull;</span>
+                      <span>{r.bay}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex flex-col items-end gap-1">
-                {isHigh && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1" style={{ background: "#fef3c7", color: "#92400e" }}>
-                    <Zap size={10} /> Jumped Ahead
+                <div className="flex flex-col items-end gap-1">
+                  <span
+                    className={r.you ? "font-bold text-xs bg-white text-emerald-900 px-2 py-0.5 rounded" : "text-xs font-medium"}
+                    style={!r.you ? { color: r.active ? "#047857" : "var(--charcoal-60)" } : {}}
+                  >
+                    {r.you ? "YOU" : r.status}
                   </span>
-                )}
-                {isMed && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#dbeafe", color: "#1e40af" }}>
-                    Medium Risk
-                  </span>
-                )}
-                <span
-                  className={r.you ? "font-bold text-xs bg-white text-emerald-900 px-2 py-0.5 rounded" : "text-xs font-medium"}
-                  style={!r.you ? { color: isHigh ? "#92400e" : "var(--charcoal-60)" } : {}}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        /* GOVERNMENT MANDI QUEUE (EXISTING) */
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="ks-display text-xl font-bold">Live Queue</h2>
+            <span className="ks-badge ks-badge-green text-xs" style={{ fontSize: "10px" }}>
+              ⚡ Perishability Priority Active
+            </span>
+          </div>
+          <p className="text-sm mb-3" style={{ color: "var(--charcoal-60)" }}>{FARMER.centre.en} &middot; Counter 1</p>
+
+          {/* Visual Priority Triage Demonstrator */}
+          <div className="ks-card p-4 mb-4" style={{ background: "#ffffff", border: "1px solid var(--border)" }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center"
+                  style={{ background: "var(--green-bg)", color: "var(--green-deep)" }}
                 >
-                  {r.you ? "YOU" : r.status === "processing" ? "Serving at Counter 1" : "Waiting in Line"}
-                </span>
+                  <Zap size={14} />
+                </div>
+                <div>
+                  <span className="font-bold text-xs text-slate-800">
+                    AI Crop Perishability Prioritization
+                  </span>
+                  <span className="text-[10px] ml-2 font-semibold px-2 py-0.5 rounded-full" style={{ background: "var(--green-bg)", color: "var(--green-deep)" }}>
+                    Active
+                  </span>
+                </div>
               </div>
+              <span className="text-[11px] text-slate-400 font-medium">FIFO Safe</span>
             </div>
-          );
-        })}
-      </div>
 
-      <button onClick={advance} className="ks-btn ks-btn-primary w-full py-3 flex items-center justify-center gap-2 cursor-pointer">
-        <RotateCcw size={15} /> Advance Next Farmer (Weighbridge)
-      </button>
+            <p className="text-xs text-slate-600 leading-relaxed mb-3">
+              Perishable produce (Soybean, Mustard · 5-day shelf life) is automatically prioritized to the front of the waiting queue. Standard grains (Wheat · 90-day shelf life) wait their turn safely in line without leaving the queue.
+            </p>
+
+            {/* Demo Controls */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  playChime();
+                  setPriorityNotice("⚡ Priority Jump in Action: Dinesh Yadav (Soybean, 5-day shelf life) prioritized to Pos #2! 4 Wheat farmers shifted to wait safely behind without leaving the queue.");
+                  try {
+                    await fetch("/api/slots/book", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ farmer_id: "FR-98217", centre_id: 1, slot_id: 1 }),
+                    });
+                  } catch (e) {}
+                  fetchQueue();
+                }}
+                className="ks-btn ks-btn-primary flex-1 py-2 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Zap size={13} />
+                <span>Simulate Soybean Priority Jump</span>
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await resetQueue(1);
+                  setPriorityNotice("Queue restored to standard baseline.");
+                  fetchQueue();
+                }}
+                className="ks-btn ks-btn-outline py-2 px-3 text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer"
+                title="Reset queue"
+              >
+                <RotateCcw size={12} />
+                <span>Reset</span>
+              </button>
+            </div>
+
+            {priorityNotice && (
+              <div className="mt-3 text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 flex items-start gap-2 animate-fade-in">
+                <Info size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                <span>{priorityNotice}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="ks-card p-4 mb-4 flex items-center justify-between">
+            <div>
+              <div className="text-xs" style={{ color: "var(--charcoal-60)" }}>Currently Calling</div>
+              <div className="ks-display text-2xl font-bold" style={{ color: "var(--green-deep)" }}>{current}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs" style={{ color: "var(--charcoal-60)" }}>Your Token</div>
+              <div className="ks-display text-2xl font-bold" style={{ color: "var(--green-deep)" }}>{myToken}</div>
+            </div>
+          </div>
+
+          <div className="ks-card p-4 mb-4 text-center">
+            <div className="ks-display text-3xl font-bold mb-1">{ahead.length}</div>
+            <div className="text-sm mb-3" style={{ color: "var(--charcoal-60)" }}>
+              {ahead.length === 0 ? "You are next in line (Highest Priority)!" : `farmer${ahead.length === 1 ? "" : "s"} ahead of you`}
+            </div>
+            <div className="ks-progress-track mb-3" style={{ height: 8 }}>
+              <div className="ks-progress-fill h-full" style={{ width: `${Math.max(15, 100 - ahead.length * 18)}%` }} />
+            </div>
+            <Badge tone="green" icon={TrendingUp}>
+              {ahead.length === 0 ? "Priority fast-track active \u00b7 Proceed to Gate" : `Est. wait: ${ahead.length * 4} min \u00b7 Queue moving normally`}
+            </Badge>
+          </div>
+
+          <div className="space-y-2 mb-4">
+            {list.map((r, idx) => {
+              const isHigh = r.score >= 3;
+              const isMed = r.score === 2;
+              return (
+                <div
+                  key={r.tok}
+                  className="flex items-center justify-between px-3.5 py-3 rounded-xl text-sm transition-all"
+                  style={
+                    r.you
+                      ? { background: "var(--green-deep)", color: "#fff", boxShadow: "0 2px 8px rgba(31,77,54,0.25)" }
+                      : isHigh
+                      ? { background: "#fffdf5", border: "2px solid #f59e0b", boxShadow: "0 1px 4px rgba(245,158,11,0.15)" }
+                      : { background: "#fff", border: "1px solid var(--border)" }
+                  }
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                      style={{
+                        background: r.you ? "rgba(255,255,255,0.25)" : isHigh ? "#fef3c7" : "var(--cream-2)",
+                        color: r.you ? "#fff" : isHigh ? "#92400e" : "var(--charcoal)",
+                      }}
+                    >
+                      #{idx + 1}
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold">{r.tok}</span>
+                        {r.farmer_name && (
+                          <span className="text-xs" style={{ opacity: r.you ? 0.9 : 0.7 }}>({r.farmer_name})</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] mt-0.5 flex items-center gap-1" style={{ opacity: r.you ? 0.85 : 0.65 }}>
+                        <Wheat size={11} />
+                        <span>{r.crop}</span>
+                        <span>&bull;</span>
+                        <span>{isHigh ? "5-Day Shelf Life" : isMed ? "7-Day Shelf Life" : "90-Day Stable"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1">
+                    {isHigh && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1" style={{ background: "#fef3c7", color: "#92400e" }}>
+                        <Zap size={10} /> Jumped Ahead
+                      </span>
+                    )}
+                    {isMed && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1" style={{ background: "#dbeafe", color: "#1e40af" }}>
+                        Medium Risk
+                      </span>
+                    )}
+                    <span
+                      className={r.you ? "font-bold text-xs bg-white text-emerald-900 px-2 py-0.5 rounded" : "text-xs font-medium"}
+                      style={!r.you ? { color: isHigh ? "#92400e" : "var(--charcoal-60)" } : {}}
+                    >
+                      {r.you ? "YOU" : r.status === "processing" ? "Serving at Counter 1" : "Waiting in Line"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <button onClick={advance} className="ks-btn ks-btn-primary w-full py-3 flex items-center justify-center gap-2 cursor-pointer">
+            <RotateCcw size={15} /> Advance Next Farmer (Weighbridge)
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1919,11 +3177,12 @@ function ProcessFarmer({ onBack, onComplete, done, farmer }) {
 /* ADMIN                                                                */
 /* ------------------------------------------------------------------ */
 
-function AdminDashboard({ page, setPage, completed, allocationApplied, applyAllocation }) {
+function AdminDashboard({ page, setPage, completed, allocationApplied, applyAllocation, resetAllocation }) {
   const statusTone = { Busy: "amber", Critical: "red", Normal: "green" };
   const [adminData, setAdminData] = useState(null);
   const [demandData, setDemandData] = useState(null);
   const [imbalanceData, setImbalanceData] = useState(null);
+  const [allocationCentre, setAllocationCentre] = useState("vidisha");
 
   const [weatherActionTaken, setWeatherActionTaken] = useState(false);
   const [clusterRebalanced, setClusterRebalanced] = useState(false);
@@ -1937,7 +3196,7 @@ function AdminDashboard({ page, setPage, completed, allocationApplied, applyAllo
 
   useEffect(() => {
     if (page === "allocation") {
-      getDemandCapacity(2, "2026-09-12", null).then((data) => {
+      getDemandCapacity(8, "2026-09-12", null).then((data) => {
         if (data && data.data) setDemandData(data.data);
       });
       getImbalances("2026-09-12", null).then((data) => {
@@ -1981,7 +3240,9 @@ function AdminDashboard({ page, setPage, completed, allocationApplied, applyAllo
     }
     return c;
   });
-  const chartData = demandData || (allocationApplied ? DEMAND_FIXED : DEMAND_BASE);
+  const chartData = allocationCentre === "bhopal"
+    ? (allocationApplied ? DEMAND_BHOPAL_FIXED : DEMAND_BHOPAL_BASE)
+    : (allocationApplied ? DEMAND_FIXED : DEMAND_BASE);
 
   const links = [
     { id: "overview", label: "Command Overview", icon: LayoutGrid },
@@ -2748,62 +4009,228 @@ function AdminDashboard({ page, setPage, completed, allocationApplied, applyAllo
             </div>
 
             <div className="ks-card p-5" style={{ background: "#fff", border: "1px solid var(--border)" }}>
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles size={16} style={{ color: "var(--green-deep)" }} />
-                <h3 className="font-semibold text-sm">Expected Demand vs. Available Mandi Capacity</h3>
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} style={{ color: "var(--green-deep)" }} />
+                  <h3 className="font-semibold text-sm">
+                    {allocationCentre === "bhopal" ? "Bhopal Logistics Terminal — Intake Load" : "Vidisha Procurement Centre — Demand vs. Mandi Capacity"}
+                  </h3>
+                </div>
+
+                {/* Centre Switcher Tabs */}
+                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setAllocationCentre("vidisha")}
+                    className="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer"
+                    style={{
+                      background: allocationCentre === "vidisha" ? "#fff" : "transparent",
+                      color: allocationCentre === "vidisha" ? "var(--green-deep)" : "var(--charcoal-60)",
+                      boxShadow: allocationCentre === "vidisha" ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+                    }}
+                  >
+                    <span>📍 Vidisha Main APMC</span>
+                    {!allocationApplied && (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-red-100 text-red-700 font-extrabold">
+                        136% Peak
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAllocationCentre("bhopal")}
+                    className="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer"
+                    style={{
+                      background: allocationCentre === "bhopal" ? "#fff" : "transparent",
+                      color: allocationCentre === "bhopal" ? "var(--green-deep)" : "var(--charcoal-60)",
+                      boxShadow: allocationCentre === "bhopal" ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+                    }}
+                  >
+                    <span>🏢 Bhopal Terminal (Target Hub)</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-extrabold">
+                      {allocationApplied ? "+28 Absorbed" : "Spare Cap."}
+                    </span>
+                  </button>
+                </div>
               </div>
-              <div style={{ width: "100%", height: 260 }}>
+
+              <div style={{ width: "100%", height: 300 }}>
                 <ResponsiveContainer>
-                  <BarChart data={chartData}>
+                  <BarChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="hour" tick={{ fontSize: 12, fill: "#665F55" }} />
-                    <YAxis tick={{ fontSize: 12, fill: "#665F55" }} />
-                    <Tooltip />
+                    <YAxis domain={[0, 95]} tick={{ fontSize: 12, fill: "#665F55" }} />
+                    <Tooltip
+                      formatter={(val, name, item) => {
+                        if (name === "Expected Demand") {
+                          const cap = item.payload.capacity;
+                          const isOver = val > cap;
+                          const change = item.payload.change;
+                          if (isOver) {
+                            return [`${val} arrivals/hr (🚨 +${val - cap} Over Capacity!)`, name];
+                          }
+                          if (change) {
+                            return [`${val} arrivals/hr (${change} · Safe)`, name];
+                          }
+                          return [`${val} arrivals/hr (Safe)`, name];
+                        }
+                        return [`${val} arrivals/hour`, name];
+                      }}
+                    />
                     <Legend />
-                    <Bar dataKey="demand" name="Expected Demand" fill="#C98A22" radius={[4, 4, 0, 0]} />
+                    <ReferenceLine
+                      y={allocationCentre === "bhopal" ? 80 : 60}
+                      stroke="#DC2626"
+                      strokeDasharray="4 4"
+                      label={{
+                        value: `Max Capacity (${allocationCentre === "bhopal" ? 80 : 60}/hr)`,
+                        fill: "#DC2626",
+                        fontSize: 11,
+                        position: "top",
+                      }}
+                    />
+                    <Bar dataKey="demand" name="Expected Demand" radius={[4, 4, 0, 0]}>
+                      {chartData.map((entry, idx) => {
+                        const isOver = entry.demand > entry.capacity;
+                        const isExpanded = allocationApplied && entry.expanded;
+                        return (
+                          <Cell
+                            key={`cell-${idx}`}
+                            fill={isOver ? "#DC2626" : isExpanded ? "#2563EB" : "#C98A22"}
+                          />
+                        );
+                      })}
+                      <LabelList
+                        dataKey="tag"
+                        position="top"
+                        style={{ fontSize: 10, fontWeight: 700, fill: "#262420" }}
+                      />
+                    </Bar>
                     <Bar dataKey="capacity" name="Available Capacity" fill="#1F4D36" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+
+              {/* Dynamic Status Legend Strip */}
+              <div className="flex items-center gap-3 text-xs mt-2 justify-center flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded" style={{ background: "#C98A22" }} />
+                  <span style={{ color: "var(--charcoal-60)" }}>Standard Load</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded" style={{ background: "#DC2626" }} />
+                  <span style={{ color: "#DC2626", fontWeight: 600 }}>Overloaded Peak (136%)</span>
+                </div>
+                {allocationApplied && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded" style={{ background: "#2563EB" }} />
+                    <span style={{ color: "#2563EB", fontWeight: 700 }}>Expanded Off-Peak Slot</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded" style={{ background: "#1F4D36" }} />
+                  <span style={{ color: "var(--charcoal-60)" }}>Intake Capacity Ceiling</span>
+                </div>
+              </div>
             </div>
 
             {!allocationApplied ? (
-              <div className="ks-card p-5" style={{ background: "var(--red-bg)", border: "none" }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle size={16} style={{ color: "var(--red)" }} />
-                  <span className="font-semibold text-sm" style={{ color: "var(--red)" }}>Capacity imbalance detected</span>
+              <div className="ks-card p-5" style={{ background: "var(--red-bg)", border: "1.5px solid #F5C6CB" }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={18} style={{ color: "var(--red)" }} />
+                    <span className="font-bold text-sm" style={{ color: "var(--red)" }}>
+                      Capacity Imbalance Detected — Vidisha Procurement Centre
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-200 text-red-900">
+                    Critical Congestion Risk
+                  </span>
                 </div>
-                <p className="text-sm mb-4" style={{ color: "#7A3123" }}>
-                  {imbalanceData?.imbalances?.[0]
-                    ? `${imbalanceData.imbalances[0].centre_name.split(" ")[0]} Procurement Centre is expected to exceed capacity at ${imbalanceData.imbalances[0].peak_hour}.`
-                    : "Vidisha Procurement Centre is expected to exceed capacity between 10 AM – 12 PM."
-                  }
+
+                <p className="text-xs mb-3.5 leading-relaxed" style={{ color: "#7A3123" }}>
+                  Vidisha Procurement Centre is expected to exceed maximum capacity between <strong>10 AM – 12 PM</strong>. 
+                  Peak demand reaches <strong>82 arrivals/hr</strong> against a hard intake ceiling of <strong>60 arrivals/hr</strong> (+22 overload). 
+                  Without intervention, yard wait times will exceed 4.5 hours.
                 </p>
-                <div className="ks-card p-3.5 mb-4" style={{ border: "none", background: "#fff" }}>
-                  <span className="text-xs font-semibold uppercase" style={{ color: "var(--charcoal-60)" }}>Recommended action</span>
-                  <p className="text-sm font-medium mt-1">
-                    {imbalanceData?.imbalances?.[0]?.recommendation || "Move 28 appointments from Vidisha → Bhopal"}
+
+                <div className="ks-card p-3.5 mb-3.5" style={{ border: "1px solid #f87171", background: "#fff" }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold uppercase text-slate-500">AI Recommended Action</span>
+                    <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                      Multi-Hour Reallocation + Corridor Balancing
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    Re-allot 44 peak appointments to Vidisha Off-Peak Slots (08 AM, 12 PM, 01 PM) & Reroute 14 to Bhopal Hub
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Expanding under-utilized morning and afternoon slots at Vidisha absorbs 44 arrivals safely, while Bhopal Logistics Terminal absorbs 14 transit loads. Rebalancing restores 100% throughput with zero yard bottlenecks.
                   </p>
                 </div>
+
                 <button
+                  type="button"
                   onClick={async () => {
-                    const imb = imbalanceData?.imbalances?.[0];
-                    if (imb) {
-                      await applyAllocationAction(imb.centre_id, imb.target_centre_id, imb.move_count, "2026-09-12");
-                    }
+                    playChime();
+                    try {
+                      await applyAllocationAction(8, 10, 28, "2026-09-12");
+                    } catch (e) {}
                     applyAllocation();
                   }}
-                  className="ks-btn ks-btn-primary px-5 py-2.5 text-sm cursor-pointer"
+                  className="ks-btn ks-btn-primary px-5 py-3 text-xs font-bold cursor-pointer flex items-center gap-2 shadow-md"
                 >
-                  Apply Recommendation
+                  <Zap size={14} />
+                  <span>Apply Recommendation (Re-Allot & Expand Off-Peak Slots)</span>
                 </button>
               </div>
             ) : (
-              <div className="ks-card p-4 flex items-center gap-2" style={{ background: "var(--green-bg)", border: "none" }}>
-                <CheckCircle2 size={18} style={{ color: "var(--green-deep)" }} />
-                <span className="text-sm font-medium" style={{ color: "var(--green-deep)" }}>
-                  Slot allocation updated successfully. 28 appointments re-routed to Bhopal.
-                </span>
+              <div className="ks-card p-5" style={{ background: "var(--green-bg)", border: "1.5px solid #a3d9b1" }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={20} style={{ color: "var(--green-deep)" }} />
+                    <span className="font-bold text-sm" style={{ color: "var(--green-deep)" }}>
+                      Slot Allocation Rebalanced & Expanded Successfully
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (resetAllocation) resetAllocation();
+                    }}
+                    className="text-xs font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 cursor-pointer underline bg-white/70 px-2.5 py-1 rounded-lg border border-emerald-300"
+                    title="Reset to see imbalance again"
+                  >
+                    <RotateCcw size={12} />
+                    <span>↺ Reset Simulation</span>
+                  </button>
+                </div>
+
+                <p className="text-xs mb-3 leading-relaxed" style={{ color: "var(--green-deep)" }}>
+                  <strong>Intra-Mandi Slot Reallocation & Corridor Smoothing Applied:</strong><br />
+                  • <strong>44 appointments re-allotted:</strong> Off-peak slots expanded (<strong>08 AM</strong>: 38 → 54, <strong>12 PM</strong>: 48 → 56, <strong>01 PM</strong>: 28 → 48).<br />
+                  • <strong>14 appointments rerouted</strong> to <strong>Bhopal Bairagarh Terminal</strong>.<br />
+                  All 6 operating hours at Vidisha are now smoothly balanced within the 60 arrivals/hr capacity ceiling.
+                </p>
+
+                {/* Metric Strip */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-2">
+                  <div className="p-2.5 rounded-xl bg-white border border-emerald-200">
+                    <div className="text-[10px] text-slate-500 font-semibold">Peak Bottleneck (10-11 AM)</div>
+                    <div className="text-sm font-bold text-slate-900 mt-0.5">82/hr → 50/hr</div>
+                    <div className="text-[10px] font-bold text-emerald-700">✓ Overload Cleared (-39%)</div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white border border-emerald-200">
+                    <div className="text-[10px] text-slate-500 font-semibold">Off-Peak Intake (8 AM, 12-1 PM)</div>
+                    <div className="text-sm font-bold text-slate-900 mt-0.5">38/hr → 54/hr</div>
+                    <div className="text-[10px] font-bold text-blue-700">✓ Visibly Expanded (+44 Absorbed)</div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white border border-emerald-200">
+                    <div className="text-[10px] text-slate-500 font-semibold">Corridor Congestion</div>
+                    <div className="text-sm font-bold text-emerald-800 mt-0.5">Zero Bottlenecks</div>
+                    <div className="text-[10px] font-bold text-emerald-700">✓ 100% Load Balanced</div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -3559,6 +4986,7 @@ export default function App() {
         completed={completedCount}
         allocationApplied={allocationApplied}
         applyAllocation={() => setAllocationApplied(true)}
+        resetAllocation={() => setAllocationApplied(false)}
       />
     );
   }

@@ -472,3 +472,40 @@
   100% { top: 86%; }
 }
 
+/* Emerald / Green / Amber palette utilities */
+.bg-emerald-950 { background-color: #022c22 !important; }
+.bg-emerald-900 { background-color: #064e3b !important; }
+.bg-emerald-800 { background-color: #065f46 !important; }
+.bg-emerald-700 { background-color: #047857 !important; }
+.bg-emerald-600 { background-color: #059669 !important; }
+.bg-emerald-500 { background-color: #10b981 !important; }
+.bg-emerald-200 { background-color: #a7f3d0 !important; }
+.bg-emerald-100 { background-color: #d1fae5 !important; }
+.bg-emerald-50 { background-color: #ecfdf5 !important; }
+
+.hover\:bg-emerald-800:hover { background-color: #065f46 !important; }
+.hover\:bg-emerald-700:hover { background-color: #047857 !important; }
+.hover\:bg-emerald-100:hover { background-color: #d1fae5 !important; }
+
+.text-emerald-950 { color: #022c22 !important; }
+.text-emerald-900 { color: #064e3b !important; }
+.text-emerald-800 { color: #065f46 !important; }
+.text-emerald-700 { color: #047857 !important; }
+.text-emerald-600 { color: #059669 !important; }
+.text-emerald-300 { color: #6ee7b7 !important; }
+.text-emerald-200 { color: #a7f3d0 !important; }
+.text-emerald-100 { color: #d1fae5 !important; }
+
+.text-amber-300 { color: #fcd34d !important; }
+.text-amber-700 { color: #b45309 !important; }
+.text-amber-800 { color: #92400e !important; }
+.text-amber-900 { color: #78350f !important; }
+
+.border-emerald-200 { border-color: #a7f3d0 !important; }
+.border-emerald-300 { border-color: #6ee7b7 !important; }
+.border-emerald-500 { border-color: #10b981 !important; }
+.border-emerald-600 { border-color: #059669 !important; }
+.border-emerald-700 { border-color: #047857 !important; }
+.border-emerald-800 { border-color: #065f46 !important; }
+
+
