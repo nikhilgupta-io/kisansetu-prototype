@@ -116,12 +116,33 @@ export function completeProcurement(bookingId, data) {
 /* Admin                                                               */
 /* ------------------------------------------------------------------ */
 
-export function getAdminOverview(fallback) {
-  return fetchWithFallback(`/admin/overview`, fallback);
+export function getAdminOverview(fallback, centreId = null, state = null) {
+  const params = new URLSearchParams();
+  if (centreId) params.append("centre_id", centreId);
+  if (state) params.append("state", state);
+  const q = params.toString() ? `?${params.toString()}` : "";
+  return fetchWithFallback(`/admin/overview${q}`, fallback);
 }
 
-export function getAdminCentres(fallback) {
-  return fetchWithFallback(`/admin/centres`, fallback);
+export function getAdminCentres(fallback, state = null) {
+  const q = state ? `?state=${encodeURIComponent(state)}` : "";
+  return fetchWithFallback(`/admin/centres${q}`, fallback);
+}
+
+export function getAdminStorage(fallback, centreId = null, state = null) {
+  const params = new URLSearchParams();
+  if (centreId) params.append("centre_id", centreId);
+  if (state) params.append("state", state);
+  const q = params.toString() ? `?${params.toString()}` : "";
+  return fetchWithFallback(`/admin/storage${q}`, fallback);
+}
+
+export function getAdminDbtQuota(fallback, centreId = null, state = null) {
+  const params = new URLSearchParams();
+  if (centreId) params.append("centre_id", centreId);
+  if (state) params.append("state", state);
+  const q = params.toString() ? `?${params.toString()}` : "";
+  return fetchWithFallback(`/admin/dbt-quota${q}`, fallback);
 }
 
 /* ------------------------------------------------------------------ */
@@ -147,4 +168,17 @@ export function applyAllocationAction(sourceCentreId, targetCentreId, moveCount,
     }),
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* ML Arrival Prediction                                               */
+/* ------------------------------------------------------------------ */
+
+export function getArrivalForecast(centreId, rainAlert = false, crop = "Soybean", fallback = null) {
+  return fetchWithFallback(`/prediction/forecast/${centreId}?rain_alert=${rainAlert}&crop=${crop}`, fallback);
+}
+
+export function getPredictionDrivers(fallback = null) {
+  return fetchWithFallback(`/prediction/drivers`, fallback);
+}
+
 
