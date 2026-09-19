@@ -17,7 +17,7 @@ from database import engine, Base
 import models  # noqa: F401
 
 # Import routers
-from routers import farmer, slots, queue, mandi, admin, allocation, sync, crops, ivr
+from routers import farmer, slots, queue, mandi, admin, allocation, sync, crops, ivr, prediction
 
 # ------------------------------------------------------------------ #
 # Logging                                                             #
@@ -88,6 +88,7 @@ app.include_router(allocation.router)
 app.include_router(sync.router)
 app.include_router(crops.router)
 app.include_router(ivr.router)
+app.include_router(prediction.router)
 
 
 # ------------------------------------------------------------------ #
