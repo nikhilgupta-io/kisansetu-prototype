@@ -508,4 +508,34 @@
 .border-emerald-700 { border-color: #047857 !important; }
 .border-emerald-800 { border-color: #065f46 !important; }
 
+/* Slate & Dark Command Center Palette Utilities */
+.bg-slate-950 { background-color: #020617 !important; }
+.bg-slate-900 { background-color: #0f172a !important; }
+.bg-slate-800 { background-color: #1e293b !important; }
+.bg-slate-100 { background-color: #f1f5f9 !important; }
+.bg-slate-50  { background-color: #f8fafc !important; }
+.bg-white     { background-color: #ffffff !important; }
+
+.border-slate-800 { border-color: #1e293b !important; }
+.border-slate-700 { border-color: #334155 !important; }
+.border-slate-300 { border-color: #cbd5e1 !important; }
+.border-slate-200 { border-color: #e2e8f0 !important; }
+
+.text-white     { color: #ffffff !important; }
+.text-slate-900 { color: #0f172a !important; }
+.text-slate-800 { color: #1e293b !important; }
+.text-slate-700 { color: #334155 !important; }
+.text-slate-600 { color: #475569 !important; }
+.text-slate-500 { color: #64748b !important; }
+.text-slate-400 { color: #94a3b8 !important; }
+.text-slate-300 { color: #cbd5e1 !important; }
+.text-slate-200 { color: #e2e8f0 !important; }
+.text-slate-100 { color: #f1f5f9 !important; }
+
+/* Dark gradient container */
+.bg-gradient-to-br {
+  background: linear-gradient(135deg, #0f172a 0%, #020617 100%) !important;
+}
+
+
 

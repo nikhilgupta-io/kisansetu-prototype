@@ -145,6 +145,26 @@ export function getAdminDbtQuota(fallback, centreId = null, state = null) {
   return fetchWithFallback(`/admin/dbt-quota${q}`, fallback);
 }
 
+export function getVigilanceIncidents(fallback) {
+  return fetchWithFallback(`/admin/antifraud/incidents`, fallback);
+}
+
+export function applyVigilanceAction(incidentId, action, officerNote = null) {
+  return fetchWithFallback(`/admin/antifraud/action`, null, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ incident_id: incidentId, action, officer_note: officerNote }),
+  });
+}
+
+export function evaluateFraudRisk(payload, fallback) {
+  return fetchWithFallback(`/admin/antifraud/evaluate`, fallback, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* Allocation                                                          */
 /* ------------------------------------------------------------------ */
@@ -173,12 +193,21 @@ export function applyAllocationAction(sourceCentreId, targetCentreId, moveCount,
 /* ML Arrival Prediction                                               */
 /* ------------------------------------------------------------------ */
 
-export function getArrivalForecast(centreId, rainAlert = false, crop = "Soybean", fallback = null) {
-  return fetchWithFallback(`/prediction/forecast/${centreId}?rain_alert=${rainAlert}&crop=${crop}`, fallback);
+export function getArrivalForecast(centreId, rainAlert = false, crop = "Soybean", seed = 0, fallback = null) {
+  const seedParam = seed ? `&seed=${seed}` : "";
+  return fetchWithFallback(`/prediction/forecast/${centreId}?rain_alert=${rainAlert}&crop=${crop}${seedParam}`, fallback);
 }
 
 export function getPredictionDrivers(fallback = null) {
   return fetchWithFallback(`/prediction/drivers`, fallback);
+}
+
+export function getAgmarknetDatasetSample(limit = 25, fallback = null) {
+  return fetchWithFallback(`/prediction/dataset-sample?limit=${limit}`, fallback);
+}
+
+export function getModelProvenance(fallback = null) {
+  return fetchWithFallback(`/prediction/model-provenance`, fallback);
 }
 
 
