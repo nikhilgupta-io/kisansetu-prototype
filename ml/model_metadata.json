@@ -1,0 +1,58 @@
+{
+  "model_name": "KisanSetu Random Forest Crop Inflow Regressor",
+  "algorithm": "RandomForestRegressor (120 Estimators, max_depth=14)",
+  "dataset": {
+    "source": "Agmarknet (Directorate of Marketing & Inspection, data.gov.in) + IMD Doppler Radar + Sentinel-2 L2A NDVI",
+    "records_count": 14232,
+    "train_samples": 11316,
+    "test_samples": 2916,
+    "date_range": "2023-01-01 to 2026-03-31",
+    "mandis": [
+      "Sehore Main Hub APMC",
+      "Vidisha APMC",
+      "Ichhawar Sub-Mandi",
+      "Bhopal Bairagarh Terminal"
+    ],
+    "commodities": [
+      "Soybean",
+      "Wheat",
+      "Paddy"
+    ]
+  },
+  "evaluation_metrics": {
+    "r2_score": 0.9851,
+    "r2_percentage": "98.5%",
+    "mape": 7.28,
+    "mape_formatted": "7.3%",
+    "mae_tonnes": 16.32,
+    "rmse_tonnes": 42.92,
+    "backtested_accuracy": "92.7%"
+  },
+  "feature_attributions": [
+    {
+      "feature": "lag_arrival_t7",
+      "weight_pct": 76.3
+    },
+    {
+      "feature": "rolling_mean_7d",
+      "weight_pct": 10.4
+    },
+    {
+      "feature": "satellite_ndvi_index",
+      "weight_pct": 7.5
+    },
+    {
+      "feature": "mandi_capacity_mt",
+      "weight_pct": 1.5
+    },
+    {
+      "feature": "sin_dow",
+      "weight_pct": 1.0
+    },
+    {
+      "feature": "rainfall_48h_mm",
+      "weight_pct": 0.6
+    }
+  ],
+  "trained_at": "2026-09-20 10:03:04"
+}

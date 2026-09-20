@@ -20,7 +20,7 @@ import models  # noqa: F401
 from routers import farmer, slots, queue, mandi, admin, allocation, sync, crops, ivr, prediction
 
 # ------------------------------------------------------------------ #
-# Logging                                                             #
+# Logging                                                            #
 # ------------------------------------------------------------------ #
 
 logging.basicConfig(

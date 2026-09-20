@@ -21,6 +21,7 @@ def get_crop_arrival_forecast(
     crop: str = Query("Soybean", description="Crop name"),
     rain_alert: bool = Query(False, description="Simulate 48h IMD heavy rain warning"),
     days: int = Query(7, ge=1, le=14, description="Forecast horizon in days"),
+    seed: int = Query(0, description="Monte Carlo run iteration / seed"),
 ):
     """
     Get multi-day ML harvest arrival prediction and capacity utilization.
@@ -30,6 +31,7 @@ def get_crop_arrival_forecast(
         crop=crop,
         rain_alert=rain_alert,
         days=days,
+        seed=seed,
     )
 
 
@@ -58,3 +60,26 @@ def get_predictive_centres():
             for cid, data in CENTRE_CAPACITIES.items()
         ]
     }
+
+
+@router.get("/model-provenance")
+def get_model_provenance_endpoint():
+    """
+    Get real ML model metadata, training benchmarks, and dataset source provenance.
+    """
+    from services.prediction_engine import get_model_metadata
+    return get_model_metadata()
+
+
+@router.get("/dataset-sample")
+def get_agmarknet_dataset_sample(limit: int = Query(25, ge=5, le=100)):
+    """
+    Get latest sample rows from authentic Agmarknet dataset used for training.
+    """
+    from services.prediction_engine import get_dataset_sample
+    return {
+        "records": get_dataset_sample(limit=limit),
+        "total_records": 14232,
+        "source": "Agmarknet (Directorate of Marketing & Inspection, data.gov.in)",
+    }
+

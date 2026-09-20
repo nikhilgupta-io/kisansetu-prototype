@@ -831,3 +831,70 @@ def get_centre_detail(centre_id: int, db: Session = Depends(get_db)):
         "storage_used_mt": m.get("storage_used_mt", 15000),
         "storage_occupancy_pct": m.get("storage_occupancy_pct", 60.0),
     }
+
+
+# ------------------------------------------------------------------ #
+# AI Anti-Fraud & Vigilance Subsystem Endpoints                       #
+# ------------------------------------------------------------------ #
+
+from pydantic import BaseModel
+from services.vigilance_engine import (
+    get_vigilance_overview,
+    update_incident_action,
+    calculate_fraud_risk,
+)
+
+
+class VigilanceActionRequest(BaseModel):
+    incident_id: str
+    action: str  # "freeze_dbt", "clear_audit", "dispatch_squad"
+    officer_note: Optional[str] = None
+
+
+class FraudEvaluationRequest(BaseModel):
+    crop: str = "Soybean"
+    claimed_qtl: float = 450.0
+    land_acres: float = 1.5
+    reservation_speed_sec: float = 45.0
+    moisture_pct: float = 12.0
+    regional_avg_moisture: float = 12.5
+    satellite_ndvi: float = 0.65
+
+
+@router.get("/antifraud/incidents")
+def get_antifraud_incidents():
+    """
+    Returns the real-time AI Anti-Fraud & Vigilance overview:
+    summary statistics, live flagged anomaly incidents, and audit trails.
+    """
+    return get_vigilance_overview()
+
+
+@router.post("/antifraud/action")
+def apply_antifraud_action(req: VigilanceActionRequest):
+    """
+    Executes a vigilance officer action:
+    freeze_dbt, clear_audit, or dispatch_squad.
+    """
+    updated = update_incident_action(req.incident_id, req.action, req.officer_note)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Vigilance incident ticket not found")
+    return {"status": "success", "incident": updated}
+
+
+@router.post("/antifraud/evaluate")
+def evaluate_booking_fraud_risk(req: FraudEvaluationRequest):
+    """
+    Evaluates a booking payload against the 4-pillar fraud matrix in real time.
+    Returns composite risk score, severity, breakdown, and recommended action.
+    """
+    return calculate_fraud_risk(
+        crop=req.crop,
+        claimed_qtl=req.claimed_qtl,
+        land_acres=req.land_acres,
+        reservation_speed_sec=req.reservation_speed_sec,
+        moisture_pct=req.moisture_pct,
+        regional_avg_moisture=req.regional_avg_moisture,
+        satellite_ndvi=req.satellite_ndvi,
+    )
+
